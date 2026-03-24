@@ -1,0 +1,8 @@
+{
+  "appId": "com.healthtracker.app",
+  "appName": "Health Tracker",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "http"
+  }
+}
