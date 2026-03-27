@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { format } from 'date-fns'
 import { entriesApi, appearancesApi } from '../../services/api'
 
 const PRESET_COLORS = [
-  '#ffffff', '#fef9c3', '#dcfce7', '#dbeafe', '#fce7f3',
-  '#ffe4e6', '#f3e8ff', '#ffedd5', '#e0f2fe', '#f0fdf4'
+  '#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6',
+  '#06b6d4', '#f97316', '#ec4899', '#14b8a6', '#84cc16'
 ]
 
 const PRESET_EMOJIS = [
@@ -14,7 +14,6 @@ const PRESET_EMOJIS = [
 
 export default function DailyEntryForm({ date, entry, appearance, metrics, onSaved, onClose }) {
   const dateStr = format(date, 'yyyy-MM-dd')
-  const displayDate = format(date, 'EEEE, MMMM d, yyyy')
 
   // Selected metrics to show (dropdown add)
   const [activeMetricIds, setActiveMetricIds] = useState([])
@@ -28,6 +27,10 @@ export default function DailyEntryForm({ date, entry, appearance, metrics, onSav
 
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const metricsById = useMemo(
+    () => new Map(metrics.map(metric => [metric.id, metric])),
+    [metrics]
+  )
 
   // Populate from existing entry/appearance
   useEffect(() => {
@@ -111,7 +114,10 @@ export default function DailyEntryForm({ date, entry, appearance, metrics, onSav
     }
   }
 
-  const availableMetrics = metrics.filter(m => !activeMetricIds.includes(m.id))
+  const availableMetrics = useMemo(
+    () => metrics.filter(metric => !activeMetricIds.includes(metric.id)),
+    [metrics, activeMetricIds]
+  )
 
   return (
     <div className="px-4 pb-2 space-y-5">
@@ -159,7 +165,7 @@ export default function DailyEntryForm({ date, entry, appearance, metrics, onSav
 
         <div className="space-y-2">
           {activeMetricIds.map(id => {
-            const metric = metrics.find(m => m.id === id)
+            const metric = metricsById.get(id)
             if (!metric) return null
             return (
               <MetricInput
@@ -204,11 +210,13 @@ export default function DailyEntryForm({ date, entry, appearance, metrics, onSav
                   key={e}
                   type="button"
                   onClick={() => setEmoji(emoji === e ? '' : e)}
-                  className={`text-2xl p-1.5 rounded-xl transition-colors active:scale-95 ${
-                    emoji === e ? 'bg-primary-100 ring-2 ring-primary-400' : 'active:bg-gray-100'
+                  className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all active:scale-95 ${
+                    emoji === e
+                      ? 'bg-primary-100 ring-2 ring-primary-400 ring-offset-2 ring-offset-white dark:bg-primary-900/30 dark:ring-offset-gray-800'
+                      : 'active:bg-gray-100 dark:active:bg-gray-700'
                   }`}
                 >
-                  {e}
+                  <span className="block text-2xl leading-none translate-y-[1px]">{e}</span>
                 </button>
               ))}
             </div>

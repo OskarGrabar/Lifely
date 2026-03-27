@@ -24,6 +24,29 @@ backend/    →  Java 21 · Spring Boot 3 · Spring Data JPA · H2 (file-based)
 Frontend/   →  React 18 · Vite · Tailwind CSS · Recharts · React Router
 ```
 
+## Current Frontend Architecture
+
+The current mobile app is local-first.
+
+- UI state and feature data are stored in `Frontend/src/services/localStore.js` under `ht_*` localStorage keys.
+- The backend still exists in the repo, but the active frontend features currently read and write local device storage instead of calling the Spring API.
+- Alarms are handled by a Capacitor Android plugin bridge plus React state restoration logic so ringing alarms can recover even after the app is backgrounded or relaunched.
+- Medication tracking is tied to alarms and also mirrored into calendar-compatible metric entries so the medication tracker and calendar data stay aligned.
+- Goals and habits are intentionally separate from the main calendar entry system.
+
+## Frontend Map
+
+- `Frontend/src/services/localStore.js`: Single source of truth for metrics, calendar entries, appearances, alarms, medications, habits, goals, and reset behavior.
+- `Frontend/src/services/nativeAlarms.js`: Thin JS wrapper around the custom Capacitor alarm plugin and Android scheduling rules.
+- `Frontend/src/hooks/useAlarmFiring.js`: Restores and manages the currently firing alarm overlay state.
+- `Frontend/src/components/Layout/Layout.jsx`: App shell, route container, permission prompts, snooze toast, and full-screen alarm dismissal overlay.
+- `Frontend/src/components/Calendar/*`: Monthly calendar grid and day cells.
+- `Frontend/src/components/DailyEntry/DailyEntryForm.jsx`: Daily entry editing and appearance selection.
+- `Frontend/src/components/Charts/HealthTrendsChart.jsx`: Trend charts plus the weekly medication tracker.
+- `Frontend/src/components/GoalsHabits/GoalsHabitsPage.jsx`: Current goal editor and separate habits tracker with streak logic.
+- `Frontend/src/components/Alarms/*`: Alarm CRUD, medication attachment UI, time picker, and ringing overlay.
+- `Frontend/src/components/Metrics/MetricsManager.jsx`: Settings, metric management, medication overview, theme choice, and full local reset.
+
 ---
 
 ## Running the Project
@@ -90,7 +113,9 @@ Health-Tracker/
 │       └── controller/     MetricController, DailyEntryController, DayAppearanceController
 └── Frontend/
     └── src/
-        ├── services/api.js              Axios API client
+        ├── services/localStore.js       Local-first app data source
+        ├── services/nativeAlarms.js     Capacitor alarm bridge
+        ├── services/api.js              Re-exports active frontend APIs
         ├── components/
         │   ├── Layout/                  Navbar + Layout wrapper
         │   ├── Calendar/CalendarView    Monthly grid

@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import BottomNav from './BottomNav'
 import { useAlarmScheduler } from '../../hooks/useAlarmScheduler'
 import { useAlarmFiring, getStoredFiring } from '../../hooks/useAlarmFiring'
@@ -10,13 +10,25 @@ import {
   openFullScreenIntentSettings,
   rescheduleAll,
 } from '../../services/nativeAlarms'
-import { alarmsApi } from '../../services/localStore'
+import { alarmsApi, medicationTrackerApi } from '../../services/localStore'
 import AlarmDismissOverlay from '../Alarms/AlarmDismissOverlay'
 import PermissionPrompt from '../Alarms/PermissionPrompt'
 import Toast from '../common/Toast'
 
+// Layout is the runtime coordinator for app-wide behaviors that are larger than
+// a single page: route transitions, permission prompts, ringing-alarm recovery,
+// snooze feedback, and the full-screen dismiss overlay.
+function formatLocalDate(timestamp) {
+  const date = new Date(timestamp)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export default function Layout() {
   useAlarmScheduler()
+  const location = useLocation()
 
   // Restore overlay if the app was killed while alarm was ringing
   const [firingAlarm, setFiringAlarm] = useState(() => getStoredFiring())
@@ -33,12 +45,12 @@ export default function Layout() {
     window.dispatchEvent(new CustomEvent('alarms-changed'))
     // Enrich with full alarm record (includes meds, label, etc.)
     let enriched = alarm
-    const alarmId = Math.floor((alarm.notificationId ?? 0) / 100)
+    const alarmId = alarm.alarmId || Math.floor((alarm.notificationId ?? 0) / 100)
     if (alarmId > 0) {
       const all = await alarmsApi.getAll()
       const rec = all.find(a => a.id === alarmId)
       if (rec) {
-        enriched = { ...alarm, ...rec, notificationId: alarm.notificationId }
+        enriched = { ...alarm, ...rec, alarmId, notificationId: alarm.notificationId }
         if (!rec.days || rec.days.length === 0) {
           await alarmsApi.update(alarmId, { ...rec, enabled: false })
           window.dispatchEvent(new CustomEvent('alarms-changed'))
@@ -73,6 +85,39 @@ export default function Layout() {
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [runPermissionCheck])
 
+  useEffect(() => {
+    if (!firingAlarm?.alarmId || Array.isArray(firingAlarm.meds)) return
+
+    const enrichStoredAlarm = async () => {
+      const all = await alarmsApi.getAll()
+      const rec = all.find(alarm => alarm.id === firingAlarm.alarmId)
+      if (rec) {
+        setFiringAlarm(current => {
+          if (!current || current.alarmId !== firingAlarm.alarmId || Array.isArray(current.meds)) {
+            return current
+          }
+          return { ...current, ...rec, notificationId: current.notificationId, alarmId: current.alarmId }
+        })
+      }
+    }
+
+    enrichStoredAlarm()
+  }, [firingAlarm])
+
+  const handleMedicationTaken = useCallback(async () => {
+    if (!firingAlarm?.notificationId) return
+
+    const meds = (firingAlarm.meds || []).map(med => med?.name?.trim()).filter(Boolean)
+    const date = formatLocalDate(firingAlarm.firedAt ?? Date.now())
+
+    for (const medicationName of meds) {
+      await medicationTrackerApi.setTaken(date, medicationName, true)
+    }
+
+    window.dispatchEvent(new CustomEvent('medication-tracker-changed'))
+    dismiss(firingAlarm.notificationId)
+  }, [dismiss, firingAlarm])
+
   // Action button handler per permission type
   const handlePermAction = async () => {
     if (permPrompt === 'notifications') {
@@ -92,7 +137,7 @@ export default function Layout() {
   return (
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
       {/* Page content — padded so content never hides behind the bottom nav */}
-      <main className="flex-1 px-3 pt-4 pb-28 overflow-y-auto overscroll-contain flex flex-col min-h-0">
+      <main key={location.pathname} className="page-transition flex-1 px-3 pt-4 pb-32 overflow-y-auto overscroll-contain flex flex-col min-h-0">
         <Outlet />
       </main>
       <BottomNav />
@@ -102,6 +147,7 @@ export default function Layout() {
         <AlarmDismissOverlay
           alarm={firingAlarm}
           onDismiss={() => dismiss(firingAlarm.notificationId)}
+          onMedicationTaken={handleMedicationTaken}
           onSnooze={() => {
             const ringAt = new Date(Date.now() + 5 * 60 * 1000)
             const hh = String(ringAt.getHours()).padStart(2, '0')

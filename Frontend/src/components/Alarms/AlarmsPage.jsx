@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { alarmsApi, medNamesApi } from '../../services/localStore'
-import { scheduleAlarm, cancelAlarm, AlarmPlugin } from '../../services/nativeAlarms'
-import { Capacitor } from '@capacitor/core'
+import { scheduleAlarm, cancelAlarm } from '../../services/nativeAlarms'
 import TimeWheelPicker from './TimeWheelPicker'
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -92,7 +91,6 @@ export default function AlarmsPage() {
   const [showSheet, setShowSheet] = useState(false)
   const [editId, setEditId] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
-  const [firing, setFiring] = useState(null) // id of ringing alarm overlay
   const [now, setNow] = useState(() => Date.now())
   const [medNames, setMedNames] = useState([])
   const [showMedPicker, setShowMedPicker] = useState(false)
@@ -105,37 +103,6 @@ export default function AlarmsPage() {
   }, [])
 
   const nextAlarmDate = getNextAlarmDate(alarms)
-
-  // ── TEST BUTTON — remove this block to clean up ───────────────────────────
-  const [testCountdown, setTestCountdown] = useState(null) // null | 10..0
-  const testTimerRef = useRef(null)
-  const triggerTest = () => {
-    if (testCountdown !== null) {
-      // Cancel in-progress test
-      clearInterval(testTimerRef.current)
-      if (Capacitor.isNativePlatform()) AlarmPlugin.cancel({ id: 99999 }).catch(() => {})
-      setTestCountdown(null)
-      return
-    }
-    let secs = 10
-    setTestCountdown(secs)
-    if (Capacitor.isNativePlatform()) {
-      AlarmPlugin.schedule({
-        id: 99999,
-        fireAt: Date.now() + 10_000,
-        title: '🧪 Test Alarm',
-        time: new Date(Date.now() + 10_000).toTimeString().slice(0, 5),
-        repeatMs: 0,
-      }).catch(() => {})
-    }
-    testTimerRef.current = setInterval(() => {
-      secs -= 1
-      if (secs <= 0) { clearInterval(testTimerRef.current); setTestCountdown(null) }
-      else setTestCountdown(secs)
-    }, 1000)
-  }
-  useEffect(() => () => clearInterval(testTimerRef.current), [])
-  // ── END TEST BUTTON ───────────────────────────────────────────────────────
 
   const load = async () => {
     setAlarms(await alarmsApi.getAll())
@@ -253,23 +220,9 @@ export default function AlarmsPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Alarms</h1>
-          <div className="flex gap-2">
-            {/* TEST BUTTON — remove this <button> block to clean up */}
-            <button
-              onClick={triggerTest}
-              className={`px-3 py-2 text-xs font-bold rounded-xl min-h-0 h-10 transition-colors ${
-                testCountdown !== null
-                  ? 'bg-orange-500 text-white'
-                  : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-              }`}
-            >
-              {testCountdown !== null ? `Cancel (${testCountdown}s)` : '🧪 Test'}
-            </button>
-            {/* END TEST BUTTON */}
-            <button onClick={openNew} className="btn-primary px-4 py-2 text-sm min-h-0 h-10">
-              + Add
-            </button>
-          </div>
+          <button onClick={openNew} className="btn-primary px-4 py-2 text-sm min-h-0 h-10">
+            + Add
+          </button>
         </div>
 
         {/* Next alarm countdown banner */}
@@ -317,7 +270,7 @@ export default function AlarmsPage() {
                     {alarm.label || '—'} · {repeatLabel(alarm)}
                   </p>
                   {alarm.meds?.length > 0 && (
-                    <p className="text-xs text-primary-500 dark:text-primary-400 mt-0.5 truncate">
+                    <p className="text-xs text-primary-500 dark:text-primary-400 mt-0.5 whitespace-normal break-words leading-relaxed">
                       💊 {alarm.meds.map(m => `${m.name}${m.amount ? ` ${m.amount}${m.unit}` : ''}`).join(' · ')}
                     </p>
                   )}
@@ -398,21 +351,21 @@ export default function AlarmsPage() {
                 {form.meds.length === 0 ? (
                   <p className="text-xs text-gray-400 dark:text-gray-500 py-1">No medications added</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-[28dvh] overflow-y-auto pr-1 overscroll-contain">
                     {form.meds.map((med, idx) => (
-                      <div key={idx} className="flex items-center gap-2 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/50">
-                        <span className="text-base">💊</span>
-                        <span className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-200 truncate">{med.name}</span>
+                      <div key={idx} className="flex items-start gap-2 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                        <span className="text-base mt-1">💊</span>
+                        <span className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-200 break-words leading-snug pt-1">{med.name}</span>
                         <input
                           type="number"
                           inputMode="decimal"
-                          className="input w-16 text-center py-1.5 px-2 text-sm"
+                          className="input w-16 text-center py-1.5 px-2 text-sm flex-shrink-0"
                           placeholder="amt"
                           value={med.amount}
                           onChange={e => updateMed(idx, 'amount', e.target.value)}
                         />
                         <select
-                          className="input py-1.5 px-2 text-sm w-20"
+                          className="input py-1.5 px-2 text-sm w-20 flex-shrink-0"
                           value={med.unit}
                           onChange={e => updateMed(idx, 'unit', e.target.value)}
                         >
@@ -498,9 +451,10 @@ export default function AlarmsPage() {
 
       {/* Medication picker overlay */}
       {showMedPicker && (
-        <div className="fixed inset-0 z-[60] flex flex-col justify-end">
-          <div className="absolute inset-0 bg-black/50" onClick={() => { setShowMedPicker(false); setNewMedName('') }} />
-          <div className="relative bg-white dark:bg-gray-800 rounded-t-3xl p-4 flex flex-col gap-3 max-h-[60vh]">
+        <>
+          <div className="sheet-backdrop z-[60]" onClick={() => { setShowMedPicker(false); setNewMedName('') }} />
+          <div className="sheet z-[70]">
+            <div className="px-4 pt-4 pb-4 flex flex-col gap-3 min-h-0">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Add Medication</h3>
               <button
@@ -533,7 +487,7 @@ export default function AlarmsPage() {
 
             {/* Saved med list */}
             {medNames.length > 0 ? (
-              <div className="overflow-y-auto flex-1 space-y-1 pb-2">
+              <div className="overflow-y-auto min-h-0 max-h-[45dvh] space-y-1 pb-2 overscroll-contain">
                 {medNames.map(name => (
                   <button
                     key={name}
@@ -557,7 +511,8 @@ export default function AlarmsPage() {
               </p>
             )}
           </div>
-        </div>
+          </div>
+        </>
       )}
     </>
   )
