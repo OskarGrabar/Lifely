@@ -2,6 +2,10 @@ import { useEffect, useCallback } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { AlarmPlugin } from '../services/nativeAlarms'
 
+// The alarm overlay can outlive a normal React render cycle because alarms are
+// triggered by Android, not by in-app user navigation. This hook translates the
+// native plugin events into a small persisted payload so the UI can recover the
+// ringing state after cold start, foreground resume, dismiss, or snooze.
 const FIRING_KEY = 'ht_alarm_firing'
 
 function saveFiring(alarm)  { localStorage.setItem(FIRING_KEY, JSON.stringify(alarm)) }
@@ -15,7 +19,9 @@ export function useAlarmFiring(onFire, onDismiss) {
   const doFire = useCallback((data) => {
     const payload = {
       notificationId: data.notificationId ?? data.id,
+      alarmId: data.alarmId ?? Math.floor((data.notificationId ?? data.id ?? 0) / 100),
       title: data.title ?? '⏰ Alarm',
+      firedAt: data.firedAt ?? Date.now(),
     }
     saveFiring(payload)
     onFire?.(payload)

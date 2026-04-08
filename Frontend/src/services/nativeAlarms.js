@@ -5,6 +5,9 @@ import { Capacitor, registerPlugin } from '@capacitor/core'
 export const AlarmPlugin =
   Capacitor.Plugins['AlarmPlugin'] ?? registerPlugin('AlarmPlugin')
 
+// Alarm ids are expanded into slot-specific native ids so one logical alarm can
+// support one-time, daily, and custom-weekday schedules while still being
+// canceled or rescheduled from the JS side as a single record.
 const MS_DAY  = 86_400_000
 const MS_WEEK = 604_800_000
 

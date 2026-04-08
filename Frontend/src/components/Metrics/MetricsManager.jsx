@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
-import { metricsApi } from '../../services/api'
+import { useMemo, useState, useEffect } from 'react'
+import { appDataApi, metricsApi } from '../../services/api'
 import { useThemeContext } from '../../context/ThemeContext'
+import { alarmsApi, medNamesApi } from '../../services/localStore'
 
 const DEFAULT_COLORS = [
   '#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -17,8 +18,27 @@ const EMPTY_FORM = {
   color: '#22c55e',
 }
 
+function getMedicationNames(savedNames, alarms) {
+  const names = new Set()
+
+  savedNames.forEach(name => {
+    const trimmed = name.trim()
+    if (trimmed) names.add(trimmed)
+  })
+
+  alarms.forEach(alarm => {
+    ;(alarm.meds || []).forEach(med => {
+      const trimmed = med?.name?.trim()
+      if (trimmed) names.add(trimmed)
+    })
+  })
+
+  return [...names].sort((left, right) => left.localeCompare(right))
+}
+
 export default function MetricsManager() {
   const [metrics, setMetrics] = useState([])
+  const [medicationNames, setMedicationNames] = useState([])
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState(EMPTY_FORM)
   const [editId, setEditId] = useState(null)
@@ -27,10 +47,22 @@ export default function MetricsManager() {
   const [showModal, setShowModal] = useState(false)
   const { theme, setTheme } = useThemeContext()
 
+  const visibleMetrics = useMemo(
+    () => metrics.filter(metric => metric.source !== 'medication'),
+    [metrics]
+  )
+
   const loadMetrics = async () => {
     setLoading(true)
     try {
-      setMetrics(await metricsApi.getAll())
+      const [loadedMetrics, loadedMedNames, loadedAlarms] = await Promise.all([
+        metricsApi.getAll(),
+        medNamesApi.getAll(),
+        alarmsApi.getAll(),
+      ])
+
+      setMetrics(loadedMetrics)
+      setMedicationNames(getMedicationNames(loadedMedNames, loadedAlarms))
     } catch (e) {
       setError('Failed to load metrics')
     } finally {
@@ -104,6 +136,30 @@ export default function MetricsManager() {
     }
   }
 
+  const handleDeleteAllData = async () => {
+    const confirmed = window.confirm(
+      'Delete all saved app data? This will remove metrics, calendar entries, alarms, medications, habits, goals, and appearance settings.'
+    )
+    if (!confirmed) return
+
+    setSaving(true)
+    setError('')
+
+    try {
+      await appDataApi.clearAll()
+      setTheme('system')
+      await loadMetrics()
+      setForm(EMPTY_FORM)
+      setEditId(null)
+      setShowModal(false)
+      window.dispatchEvent(new CustomEvent('alarms-changed'))
+    } catch (e) {
+      setError('Delete all data failed.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <>
       <div className="space-y-4">
@@ -139,16 +195,60 @@ export default function MetricsManager() {
           </div>
         </div>
 
-        {/* Metrics list */}
         <div className="card">
-          <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 mb-3">Your Metrics</h2>
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div>
+              <h2 className="text-base font-bold text-gray-800 dark:text-gray-100">Medications</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Medications added through alarms appear here.</p>
+            </div>
+            {!loading && medicationNames.length > 0 && (
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300">
+                {medicationNames.length}
+              </span>
+            )}
+          </div>
+
           {loading ? (
             <p className="text-gray-400 text-sm">Loading…</p>
-          ) : metrics.length === 0 ? (
+          ) : medicationNames.length === 0 ? (
+            <p className="text-gray-400 italic text-sm">No medications yet. Add them to an alarm and they will appear here.</p>
+          ) : (
+            <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+              {medicationNames.map(name => (
+                <li key={name} className="flex items-center gap-3 py-3">
+                  <div className="w-9 h-9 rounded-2xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-300 flex items-center justify-center flex-shrink-0">
+                    💊
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 break-words">{name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Tracked through alarms and the weekly medication tracker.</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Metrics list */}
+        <div className="card">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div>
+              <h2 className="text-base font-bold text-gray-800 dark:text-gray-100">Metrics</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Custom health metrics for the calendar and charts.</p>
+            </div>
+            {!loading && visibleMetrics.length > 0 && (
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                {visibleMetrics.length}
+              </span>
+            )}
+          </div>
+          {loading ? (
+            <p className="text-gray-400 text-sm">Loading…</p>
+          ) : visibleMetrics.length === 0 ? (
             <p className="text-gray-400 italic text-sm">No metrics yet. Tap “+ New Metric” to create one.</p>
           ) : (
             <ul className="divide-y divide-gray-100 dark:divide-gray-700">
-              {metrics.map(m => (
+              {visibleMetrics.map(m => (
                 <li key={m.id} className="flex items-center gap-3 py-3">
                   <span
                     className="w-4 h-4 rounded-full flex-shrink-0"
@@ -180,6 +280,21 @@ export default function MetricsManager() {
               ))}
             </ul>
           )}
+        </div>
+
+        <div className="card border-red-200 dark:border-red-900/50">
+          <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 mb-2">Danger Zone</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Delete all saved app data from this device.
+          </p>
+          <button
+            type="button"
+            onClick={handleDeleteAllData}
+            className="btn-danger w-full"
+            disabled={saving}
+          >
+            {saving ? 'Deleting…' : 'Delete All Saved Data'}
+          </button>
         </div>
       </div>
 
