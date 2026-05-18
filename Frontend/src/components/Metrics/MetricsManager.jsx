@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from 'react'
 import { appDataApi, metricsApi } from '../../services/api'
 import { useThemeContext } from '../../context/ThemeContext'
 import { alarmsApi, medNamesApi } from '../../services/localStore'
+import DriveSync from '../Sync/DriveSync'
 
 const DEFAULT_COLORS = [
   '#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -170,6 +171,9 @@ export default function MetricsManager() {
             + New Metric
           </button>
         </div>
+
+        {/* Google Drive Backup */}
+        <DriveSync />
 
         {/* Appearance / Theme picker */}
         <div className="card">

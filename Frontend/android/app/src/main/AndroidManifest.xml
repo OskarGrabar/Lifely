@@ -23,6 +23,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Google OAuth Chrome Custom Tab redirect -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.googleusercontent.apps.182781546784-fh2u8aog8k6rbcpkka3q8b00uqvaontu" />
+            </intent-filter>
+
         </activity>
 
         <!-- Foreground service: keeps alarm ringing without background limits -->
