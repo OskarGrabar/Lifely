@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import {
   format, subDays, startOfWeek, endOfWeek, addWeeks, subWeeks,
   eachDayOfInterval, isToday,
@@ -20,6 +21,21 @@ const RANGE_OPTIONS = [
 ]
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+const MED_CONFETTI_PARTICLES = [
+  { x: -110, y: -180, rotate: -42, color: '#f97316', delay: '0ms' },
+  { x: -72, y: -220, rotate: -22, color: '#fb7185', delay: '60ms' },
+  { x: -36, y: -156, rotate: -8, color: '#facc15', delay: '20ms' },
+  { x: -12, y: -245, rotate: 26, color: '#38bdf8', delay: '110ms' },
+  { x: 24, y: -198, rotate: -14, color: '#a855f7', delay: '40ms' },
+  { x: 0, y: -272, rotate: 0, color: '#22c55e', delay: '0ms' },
+  { x: 52, y: -162, rotate: 18, color: '#34d399', delay: '90ms' },
+  { x: 88, y: -232, rotate: 34, color: '#f59e0b', delay: '35ms' },
+  { x: 38, y: -176, rotate: 20, color: '#60a5fa', delay: '130ms' },
+  { x: 112, y: -208, rotate: 38, color: '#f43f5e', delay: '75ms' },
+  { x: 126, y: -142, rotate: 48, color: '#10b981', delay: '10ms' },
+  { x: 0, y: -124, rotate: -4, color: '#fde047', delay: '150ms' },
+]
 
 const DAY_TREND_OPTIONS = [
   {
@@ -240,6 +256,7 @@ export default function HealthTrendsChart() {
   const [trackerByDate, setTrackerByDate] = useState({})
   const [trackerLoading, setTrackerLoading] = useState(false)
   const [savingCell, setSavingCell] = useState('')
+  const [medCelebrationBurst, setMedCelebrationBurst] = useState(null)
 
   const chartableMetrics = useMemo(
     () => allMetrics.filter(metric => !metric.calendarOnly),
@@ -426,12 +443,14 @@ export default function HealthTrendsChart() {
     return Boolean(trackerByDate[date]?.[medicationName])
   }
 
-  const toggleMedicationTaken = async (date, medicationName) => {
+  const toggleMedicationTaken = async (date, medicationName, buttonEl) => {
+    const rect = buttonEl?.getBoundingClientRect()
     const cellKey = `${date}:${medicationName}`
     const nextTaken = !isMedicationTaken(date, medicationName)
 
     setSavingCell(cellKey)
     await medicationTrackerApi.setTaken(date, medicationName, nextTaken)
+
     setTrackerByDate(prev => {
       const next = { ...prev }
       const day = { ...(next[date] ?? {}) }
@@ -447,14 +466,47 @@ export default function HealthTrendsChart() {
 
       return next
     })
+
+    if (nextTaken && rect) {
+      setMedCelebrationBurst({ id: Date.now(), x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 })
+    }
+
     setSavingCell('')
   }
+
+  // Clear confetti burst after animation
+  useEffect(() => {
+    if (!medCelebrationBurst) return
+    const t = setTimeout(() => setMedCelebrationBurst(null), 1200)
+    return () => clearTimeout(t)
+  }, [medCelebrationBurst])
 
   const showTouchTooltip = () => setHideTouchTooltip(false)
   const hideTooltipOnTouchEnd = () => setHideTouchTooltip(true)
 
   return (
-    <div className="space-y-4">
+    <>
+      {medCelebrationBurst && createPortal(
+        <div key={medCelebrationBurst.id} className="habit-page-confetti-layer" aria-hidden="true">
+          {MED_CONFETTI_PARTICLES.map((particle, index) => (
+            <span
+              key={`med-confetti-${medCelebrationBurst.id}-${index}`}
+              className="habit-page-confetti-piece"
+              style={{
+                left: `${medCelebrationBurst.x}px`,
+                top: `${medCelebrationBurst.y}px`,
+                backgroundColor: particle.color,
+                '--burst-x': `${particle.x}px`,
+                '--burst-y': `${particle.y}px`,
+                '--burst-rotate': `${particle.rotate}deg`,
+                animationDelay: particle.delay,
+              }}
+            />
+          ))}
+        </div>,
+        document.body
+      )}
+      <div className="space-y-4">
       <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Health</h1>
 
       <div className="card">
@@ -653,7 +705,7 @@ export default function HealthTrendsChart() {
                       <button
                         key={cellKey}
                         type="button"
-                        onClick={() => toggleMedicationTaken(date, name)}
+                        onClick={e => toggleMedicationTaken(date, name, e.currentTarget)}
                         className={`rounded-2xl border px-1 py-2.5 min-h-[72px] flex flex-col items-center justify-center gap-1 text-center transition-all ${taken ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm' : 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-300'} ${isToday(day) && !taken ? 'ring-2 ring-primary-200 dark:ring-primary-800' : ''} ${pending ? 'opacity-60' : 'active:scale-[0.98]'}`}
                         aria-pressed={taken}
                         aria-label={`${name} on ${format(day, 'EEEE, MMMM d')}`}
@@ -673,6 +725,8 @@ export default function HealthTrendsChart() {
             ))}
           </div>
         )}
+
+        {medCelebrationBurst && null /* rendered at top level */}
       </section>
 
       <section className="card space-y-4">
@@ -747,5 +801,6 @@ export default function HealthTrendsChart() {
         )}
       </section>
     </div>
+    </>
   )
 }
