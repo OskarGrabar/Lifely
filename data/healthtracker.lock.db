@@ -1,6 +1,6 @@
 #FileLock
-#Mon May 18 08:22:20 CEST 2026
-hostName=localhost
-id=19e39bff01b0569a83265f631c9a00bdbba352909b4
+#Sat Jun 13 09:50:46 CEST 2026
+hostName=Oskar.lan
+id=19ebff63e0ce5b2bacf8062d02122e1e12b388a0b1c
 method=file
-server=localhost\:64501
+server=192.168.76.196\:64458

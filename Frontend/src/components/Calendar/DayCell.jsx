@@ -110,6 +110,7 @@ export default function DayCell({
   return (
     <button
       onClick={onClick}
+      data-tutorial={isToday ? 'today-cell' : undefined}
       style={bgColor ? { backgroundColor: bgColor } : undefined}
       className={clsx(
         'relative w-full h-full min-h-0 flex flex-col items-center justify-start rounded-[20px] px-1 pt-1.5 pb-1.5',
@@ -117,7 +118,7 @@ export default function DayCell({
         !isCurrentMonth && 'opacity-35',
         bgColor
           ? 'active:brightness-95'
-          : 'bg-gray-50 dark:bg-gray-700/45 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-700',
+          : 'bg-gray-100/80 dark:bg-gray-700/45 hover:bg-gray-200/60 dark:hover:bg-gray-700 active:bg-gray-200/60 dark:active:bg-gray-700',
         isSelected && 'ring-2 ring-primary-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-800 shadow-[0_10px_22px_-18px_rgba(34,197,94,0.9)]',
         !isSelected && 'border border-transparent',
       )}
@@ -132,7 +133,7 @@ export default function DayCell({
             ? 'bg-primary-600 text-white'
             : bgColor
               ? clsx(badgeTextClass, 'shadow-sm')
-              : 'bg-white/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-200',
+                : 'text-gray-700 dark:text-gray-200',
         )}
       >
         {dateStr}

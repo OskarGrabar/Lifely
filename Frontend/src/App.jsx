@@ -6,21 +6,26 @@ import MetricsManager from './components/Metrics/MetricsManager'
 import HealthTrendsChart from './components/Charts/HealthTrendsChart'
 import AlarmsPage from './components/Alarms/AlarmsPage'
 import GoalsHabitsPage from './components/GoalsHabits/GoalsHabitsPage'
+import { TutorialProvider } from './context/TutorialContext'
+import TutorialOverlay from './components/Tutorial/TutorialOverlay'
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Navigate to="/calendar" replace />} />
-          <Route path="calendar" element={<CalendarView />} />
-          <Route path="daily-check-in" element={<DailyCheckInPage />} />
-          <Route path="goals-habits" element={<GoalsHabitsPage />} />
-          <Route path="metrics" element={<MetricsManager />} />
-          <Route path="trends" element={<HealthTrendsChart />} />
-          <Route path="alarms" element={<AlarmsPage />} />
-        </Route>
-      </Routes>
+      <TutorialProvider>
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Navigate to="/calendar" replace />} />
+            <Route path="calendar" element={<CalendarView />} />
+            <Route path="daily-check-in" element={<DailyCheckInPage />} />
+            <Route path="goals-habits" element={<GoalsHabitsPage />} />
+            <Route path="metrics" element={<MetricsManager />} />
+            <Route path="trends" element={<HealthTrendsChart />} />
+            <Route path="alarms" element={<AlarmsPage />} />
+          </Route>
+        </Routes>
+        <TutorialOverlay />
+      </TutorialProvider>
     </BrowserRouter>
   )
 }

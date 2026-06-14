@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { format } from 'date-fns'
 import { entriesApi, appearancesApi } from '../../services/api'
+import { useLocaleContext } from '../../context/LocaleContext'
 
 const PRESET_COLORS = [
   '#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -13,6 +14,7 @@ const PRESET_EMOJIS = [
 ]
 
 export default function DailyEntryForm({ date, entry, appearance, metrics, onSaved, onClose }) {
+  const { t } = useLocaleContext()
   const dateStr = format(date, 'yyyy-MM-dd')
 
   // Selected metrics to show (dropdown add)
@@ -92,6 +94,7 @@ export default function DailyEntryForm({ date, entry, appearance, metrics, onSav
 
       onSaved()
       onClose()
+      window.dispatchEvent(new CustomEvent('tut-action-done'))
     } catch (err) {
       console.error('Save failed', err)
     } finally {
@@ -100,7 +103,7 @@ export default function DailyEntryForm({ date, entry, appearance, metrics, onSav
   }
 
   const handleDelete = async () => {
-    if (!window.confirm('Delete all data for this day?')) return
+    if (!window.confirm(t('delete_day_confirm'))) return
     setDeleting(true)
     try {
       await entriesApi.delete(dateStr)
@@ -140,14 +143,14 @@ export default function DailyEntryForm({ date, entry, appearance, metrics, onSav
       {/* Metric Values */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <span className="label mb-0">Metrics</span>
+          <span className="label mb-0">{t('form_metrics_label')}</span>
           {availableMetrics.length > 0 && (
             <select
               className="text-sm border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 dark:text-gray-100 min-h-[40px]"
               defaultValue=""
               onChange={e => { if (e.target.value) { addMetric(e.target.value); e.target.value = '' } }}
             >
-              <option value="" disabled>+ Add metric…</option>
+              <option value="" disabled>{t('add_metric_prompt')}</option>
               {availableMetrics.map(m => (
                 <option key={m.id} value={m.id}>{m.name}</option>
               ))}
@@ -158,8 +161,8 @@ export default function DailyEntryForm({ date, entry, appearance, metrics, onSav
         {activeMetricIds.length === 0 && (
           <p className="text-sm text-gray-400 italic py-2">
             {metrics.length === 0
-              ? 'No metrics yet — create some in the Metrics tab.'
-              : 'Tap "+ Add metric…" to start logging.'}
+              ? t('no_metrics_form')
+              : t('no_metrics_tap', t('add_metric_prompt'))}
           </p>
         )}
 
@@ -182,11 +185,11 @@ export default function DailyEntryForm({ date, entry, appearance, metrics, onSav
 
       {/* Notes */}
       <div>
-        <label className="label">Notes</label>
+        <label className="label">{t('form_notes_label')}</label>
         <textarea
           className="input resize-none"
           rows={2}
-          placeholder="How are you feeling today?"
+          placeholder={t('notes_placeholder')}
           value={notes}
           onChange={e => setNotes(e.target.value)}
         />
@@ -195,15 +198,15 @@ export default function DailyEntryForm({ date, entry, appearance, metrics, onSav
       {/* Day Appearance — collapsible */}
       <details className="group">
         <summary className="flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 active:bg-gray-100 dark:active:bg-gray-700 cursor-pointer select-none list-none transition-colors">
-          <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">🎨 Day Appearance</span>
-          <span className="text-xs text-gray-400">(optional)</span>
+          <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('day_appearance_title')}</span>
+          <span className="text-xs text-gray-400">{t('appearance_optional')}</span>
           <span className="ml-auto text-gray-500 text-sm group-open:rotate-180 transition-transform">▾</span>
         </summary>
 
         <div className="mt-2 space-y-4 pt-1 border-t border-gray-100">
           {/* Emoji picker */}
           <div>
-            <label className="label">Emoji</label>
+            <label className="label">{t('emoji_label')}</label>
             <div className="flex flex-wrap gap-1 mb-2">
               {PRESET_EMOJIS.map(e => (
                 <button
@@ -224,7 +227,7 @@ export default function DailyEntryForm({ date, entry, appearance, metrics, onSav
               type="text"
               className="input"
               maxLength={8}
-              placeholder="Or type any emoji…"
+              placeholder={t('emoji_placeholder')}
               value={emoji}
               onChange={e => setEmoji(e.target.value)}
             />
@@ -232,7 +235,7 @@ export default function DailyEntryForm({ date, entry, appearance, metrics, onSav
 
           {/* Color swatches */}
           <div>
-            <label className="label">Background Color</label>
+            <label className="label">{t('bg_color_label')}</label>
             <div className="flex flex-wrap gap-3 items-center">
               {PRESET_COLORS.map(c => (
                 <button
@@ -259,7 +262,7 @@ export default function DailyEntryForm({ date, entry, appearance, metrics, onSav
       {/* Action buttons */}
       <div className="flex gap-2 pt-1">
         <button className="btn-primary flex-1" onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? t('loading') : t('save')}
         </button>
         {(entry || appearance) && (
           <button className="btn-danger" onClick={handleDelete} disabled={deleting}>
@@ -273,6 +276,7 @@ export default function DailyEntryForm({ date, entry, appearance, metrics, onSav
 
 // ─── Individual metric input ─────────────────────────────────────────────────
 function MetricInput({ metric, value, onChange, onRemove }) {
+  const { t } = useLocaleContext()
   const { name, type, unit, minValue, maxValue } = metric
 
   return (
@@ -303,7 +307,7 @@ function MetricInput({ metric, value, onChange, onRemove }) {
                   : 'bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300'
               }`}
             >
-              {opt === 'Yes' ? '✓ Yes' : '✗ No'}
+              {opt === 'Yes' ? t('btn_yes') : t('btn_no')}
             </button>
           ))}
         </div>

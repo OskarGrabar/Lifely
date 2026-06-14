@@ -3,6 +3,7 @@ import { useGoogleLogin } from '@react-oauth/google'
 import { Capacitor } from '@capacitor/core'
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth'
 import { backupToDrive, restoreFromDrive } from '../../services/driveSync'
+import { useLocaleContext } from '../../context/LocaleContext'
 
 const WEB_CLIENT_ID = '182781546784-o9rdhhqtlh3erlqov40lrgkrtuuqsspp.apps.googleusercontent.com'
 const WEB_SCOPE = 'https://www.googleapis.com/auth/drive.file'
@@ -12,6 +13,7 @@ const TOKEN_KEY = 'ht_drive_token'
 const AUTO_SYNC_INTERVAL = 5 * 60 * 1000 // 5 minutes
 
 export default function DriveSync() {
+  const { t } = useLocaleContext()
   const isNative = Capacitor.isNativePlatform()
   const [accessToken, setAccessToken] = useState(() => localStorage.getItem(TOKEN_KEY))
   const [userEmail, setUserEmail] = useState(null)
@@ -26,13 +28,43 @@ export default function DriveSync() {
   // Keep ref in sync so interval/event handlers always have the latest token
   useEffect(() => { accessTokenRef.current = accessToken }, [accessToken])
 
+  // Is the error a token expiry?
+  const is401 = (e) => /\b401\b/.test(e?.message)
+
+  // Native: silently refresh the access token and update all state
+  const refreshNativeToken = useCallback(async () => {
+    const result = await GoogleAuth.refresh()
+    const token = result.accessToken
+    localStorage.setItem(TOKEN_KEY, token)
+    accessTokenRef.current = token
+    setAccessToken(token)
+    return token
+  }, [])
+
+  // Runs fn(token). On 401: native = refresh + retry; web = clear session + throw
+  const withTokenRefresh = useCallback(async (fn) => {
+    try {
+      return await fn(accessTokenRef.current)
+    } catch (e) {
+      if (!is401(e)) throw e
+      if (isNative) {
+        const newToken = await refreshNativeToken()
+        return await fn(newToken)
+      } else {
+        localStorage.removeItem(TOKEN_KEY)
+        accessTokenRef.current = null
+        setAccessToken(null)
+        throw new Error(t('drive_session_expired'))
+      }
+    }
+  }, [isNative, refreshNativeToken, t])
+
   // Auto-sync: run backup silently
   const silentBackup = useCallback(async () => {
-    const token = accessTokenRef.current
-    if (!token) return
+    if (!accessTokenRef.current) return
     setAutoSyncing(true)
     try {
-      const ts = await backupToDrive(token)
+      const ts = await withTokenRefresh(token => backupToDrive(token))
       localStorage.setItem(LAST_BACKUP_KEY, ts)
       setLastBackup(ts)
     } catch (_) {
@@ -40,7 +72,7 @@ export default function DriveSync() {
     } finally {
       setAutoSyncing(false)
     }
-  }, [])
+  }, [withTokenRefresh])
 
   // Auto-sync on 5-minute interval while signed in
   useEffect(() => {
@@ -92,7 +124,7 @@ export default function DriveSync() {
       setAccessToken(token)
       setStatus(null)
     },
-    onError: () => setStatus({ type: 'error', text: 'Sign-in failed. Please try again.' }),
+    onError: () => setStatus({ type: 'error', text: t('drive_signin_failed') }),
   })
 
   // Android sign-in via native Google account picker (one tap, no codes)
@@ -106,7 +138,7 @@ export default function DriveSync() {
       setAccessToken(token)
       setStatus(null)
     } catch (e) {
-      setStatus({ type: 'error', text: e.message || 'Sign-in failed. Please try again.' })
+      setStatus({ type: 'error', text: e.message || t('drive_signin_failed') })
     } finally {
       setIsBusy(false)
     }
@@ -133,10 +165,10 @@ export default function DriveSync() {
     setIsBusy(true)
     setStatus(null)
     try {
-      const ts = await backupToDrive(accessToken)
+      const ts = await withTokenRefresh(token => backupToDrive(token))
       localStorage.setItem(LAST_BACKUP_KEY, ts)
       setLastBackup(ts)
-      setStatus({ type: 'success', text: 'Data backed up to Google Drive.' })
+      setStatus({ type: 'success', text: t('drive_backed_up') })
     } catch (e) {
       setStatus({ type: 'error', text: e.message })
     } finally {
@@ -145,17 +177,15 @@ export default function DriveSync() {
   }
 
   const handleRestore = async () => {
-    const confirmed = window.confirm(
-      'Restore data from Google Drive? This will overwrite all current data on this device.'
-    )
+    const confirmed = window.confirm(t('drive_restore_confirm'))
     if (!confirmed) return
     setIsBusy(true)
     setStatus(null)
     try {
-      const ts = await restoreFromDrive(accessToken)
+      const ts = await withTokenRefresh(token => restoreFromDrive(token))
       if (ts) { localStorage.setItem(LAST_BACKUP_KEY, ts); setLastBackup(ts) }
       setRestored(true)
-      setStatus({ type: 'success', text: 'Data restored. Tap "Reload App" to see your data.' })
+      setStatus({ type: 'success', text: t('drive_restored_msg', t('drive_reload_app')) })
     } catch (e) {
       setStatus({ type: 'error', text: e.message })
     } finally {
@@ -164,12 +194,12 @@ export default function DriveSync() {
   }
 
   return (
-    <div className="card">
+    <div data-tutorial="settings-drive" className="card">
       <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 mb-1">
-        Google Drive Backup
+        {t('drive_backup_title')}
       </h2>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-        Save your health data to your personal Google Drive so you can restore it on any device.
+        {t('drive_backup_subtitle')}
       </p>
 
       {!accessToken ? (
@@ -179,7 +209,7 @@ export default function DriveSync() {
             disabled={isBusy}
             className="flex items-center justify-center gap-2 w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 active:bg-gray-100 disabled:opacity-50 transition"
           >
-            {isBusy ? 'Signing in...' : 'Sign in with Google'}
+            {isBusy ? t('drive_signing_in') : t('drive_sign_in')}
           </button>
 
         </div>
@@ -187,17 +217,17 @@ export default function DriveSync() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-              ✓ {userEmail || 'Google account connected'}
+              ✓ {userEmail || t('drive_connected')}
             </span>
             <div className="flex items-center gap-2">
               {autoSyncing && (
-                <span className="text-xs text-blue-400 animate-pulse">Syncing...</span>
+                <span className="text-xs text-blue-400 animate-pulse">{t('drive_syncing')}</span>
               )}
               <button
                 onClick={handleSignOut}
                 className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition"
               >
-                Sign out
+                {t('drive_sign_out')}
               </button>
             </div>
           </div>
@@ -208,24 +238,24 @@ export default function DriveSync() {
               disabled={isBusy}
               className="flex-1 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white text-sm font-semibold py-2.5 transition"
             >
-              {isBusy ? 'Working...' : '☁ Back Up Now'}
+              {isBusy ? t('drive_working') : t('drive_backup_now')}
             </button>
             <button
               onClick={handleRestore}
               disabled={isBusy}
               className="flex-1 rounded-xl bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white text-sm font-semibold py-2.5 transition"
             >
-              {isBusy ? 'Working...' : '⬇ Restore'}
+              {isBusy ? t('drive_working') : t('drive_restore')}
             </button>
           </div>
 
           {lastBackup && (
             <p className="text-xs text-gray-400 dark:text-gray-500">
-              Last backup: {new Date(lastBackup).toLocaleString()}
+              {t('drive_last_backup', new Date(lastBackup).toLocaleString())}
             </p>
           )}
           <p className="text-xs text-blue-400 dark:text-blue-500">
-            Auto-sync on · backs up every 5 min and when you leave the app
+            {t('drive_auto_sync_on')}
           </p>
         </div>
       )}
@@ -247,7 +277,7 @@ export default function DriveSync() {
           onClick={() => window.location.reload()}
           className="mt-2 w-full rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold py-2.5 transition"
         >
-          Reload App
+          {t('drive_reload_app')}
         </button>
       )}
     </div>

@@ -18,6 +18,13 @@ const BACKUP_KEYS = [
   'ht_next_id',
   'ht_alarms',
   'ht_med_names',
+  // Customisation / preferences
+  'ht_theme',
+  'ht_color_theme',
+  'ht_bg_theme',
+  'ht_gradient',
+  'ht_lang',
+  'ht_tutorial_done',
 ]
 
 async function findBackupFile(accessToken) {

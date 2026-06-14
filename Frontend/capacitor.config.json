@@ -1,6 +1,6 @@
 {
-  "appId": "com.healthtracker.app",
-  "appName": "Health Tracker",
+  "appId": "com.oskar.lifely",
+  "appName": "Lifely",
   "webDir": "dist",
   "server": {
     "androidScheme": "http"

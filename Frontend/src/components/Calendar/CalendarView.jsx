@@ -1,16 +1,21 @@
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   addMonths, subMonths, eachDayOfInterval, isSameMonth, isSameDay, isToday,
 } from 'date-fns'
+import { enUS, pl as plLocale, sv as svLocale, es as esLocale } from 'date-fns/locale'
 import { entriesApi, appearancesApi, metricsApi } from '../../services/api'
+import { useLocaleContext } from '../../context/LocaleContext'
 import DayCell from './DayCell'
 import DailyEntryForm from '../DailyEntry/DailyEntryForm'
 
-const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+const WEEKDAYS_EN = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+const DATE_FNS_LOCALE = { en: enUS, pl: plLocale, sv: svLocale, es: esLocale }
 
 export default function CalendarView() {
+  const { t, lang } = useLocaleContext()
   const navigate = useNavigate()
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [entries, setEntries] = useState({})
@@ -18,6 +23,10 @@ export default function CalendarView() {
   const [metrics, setMetrics] = useState([])
   const [selectedDate, setSelectedDate] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [showMonthPicker, setShowMonthPicker] = useState(false)
+  const [pickerYear, setPickerYear] = useState(() => new Date().getFullYear())
+
+  const dateFnsLocale = DATE_FNS_LOCALE[lang] ?? enUS
 
   const year = currentMonth.getFullYear()
   const month = currentMonth.getMonth() + 1
@@ -29,21 +38,21 @@ export default function CalendarView() {
   )
   const hasSubmittedDailyCheckIn = Boolean(todayEntry?.dailyCheckInCompleted)
   const dailyCheckInTitle = hasSubmittedDailyCheckIn
-    ? 'You Have Submitted Your Daily Check-In'
+    ? t('checkin_submitted_title')
     : hasStartedDailyCheckIn
-      ? 'Continue Your Daily Check-In'
-      : 'Start Your Daily Check-In'
+      ? t('checkin_continue_title')
+      : t('checkin_start_title')
   const dailyCheckInButtonLabel = hasSubmittedDailyCheckIn
-    ? 'You have submitted your daily check-in'
+    ? t('checkin_submitted_btn')
     : hasStartedDailyCheckIn
-      ? 'Continue your daily check-in'
-      : 'Start your daily check-in'
+      ? t('checkin_continue_btn')
+      : t('checkin_start_btn')
   const dailyCheckInHelperText = hasSubmittedDailyCheckIn
-    ? 'Today is already submitted. You can reopen it if you want to review or change it.'
+    ? t('checkin_submitted_helper')
     : hasStartedDailyCheckIn
-      ? 'Pick up where you left off on the dedicated page.'
-      : 'Tap to continue to the dedicated page.'
-  const dailyCheckInHeaderClass = 'border-gray-100 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
+      ? t('checkin_continue_helper')
+      : t('checkin_start_helper')
+  const dailyCheckInHeaderClass = 'border-gray-100 dark:border-gray-700'
   const dailyCheckInEyebrowClass = hasSubmittedDailyCheckIn
     ? 'text-primary-600 dark:text-primary-400'
     : hasStartedDailyCheckIn
@@ -124,10 +133,10 @@ export default function CalendarView() {
 
         <button
           className="flex-1 text-center"
-          onClick={() => setCurrentMonth(new Date())}
+          onClick={() => { setPickerYear(currentMonth.getFullYear()); setShowMonthPicker(true) }}
         >
           <span className="text-base font-bold text-gray-800 dark:text-gray-100">
-            {format(currentMonth, 'MMMM yyyy')}
+            {(() => { const s = format(currentMonth, 'MMMM yyyy', { locale: dateFnsLocale }); return s.charAt(0).toUpperCase() + s.slice(1); })()}
           </span>
         </button>
 
@@ -139,14 +148,14 @@ export default function CalendarView() {
         </button>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-[26px] border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col flex-none p-2 gap-2">
-        <div className="grid grid-cols-7 gap-1.5 flex-shrink-0">
-          {WEEKDAYS.map((day, index) => (
+      <div data-tutorial="calendar-grid" className="rounded-[26px] border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col flex-none p-2 gap-2" style={{ backgroundColor: 'var(--bg-card)' }}>
+        <div data-tutorial="calendar-header" className="grid grid-cols-7 gap-1.5 flex-shrink-0">
+          {WEEKDAYS_EN.map((_, index) => (
             <div
               key={index}
               className="rounded-full bg-gray-50 dark:bg-gray-700/60 py-1.5 text-center text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase"
             >
-              {day}
+              {t(`wd_1char_${index}`)}
             </div>
           ))}
         </div>
@@ -157,6 +166,7 @@ export default function CalendarView() {
             style={{ minHeight: `${rowCount * rowHeightRem}rem` }}
           >
             Loading…
+            // no translation needed, user won't see this long
           </div>
         ) : (
           <div
@@ -183,11 +193,11 @@ export default function CalendarView() {
         )}
       </div>
 
-      <section className="overflow-hidden rounded-[28px] border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <section data-tutorial="checkin-card" className="overflow-hidden rounded-[28px] border border-gray-200 dark:border-gray-700 shadow-sm" style={{ backgroundColor: 'var(--bg-card)' }}>
         <div className={`border-b px-4 py-4 ${dailyCheckInHeaderClass}`}>
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className={`text-[11px] font-bold uppercase tracking-[0.2em] ${dailyCheckInEyebrowClass}`}>Daily Check-In</p>
+              <p className={`text-[11px] font-bold uppercase tracking-[0.2em] ${dailyCheckInEyebrowClass}`}>{t('daily_check_in')}</p>
               <h2 className="mt-1 text-base font-bold text-gray-800 dark:text-gray-100">{dailyCheckInTitle}</h2>
               
             </div>
@@ -209,7 +219,7 @@ export default function CalendarView() {
         </div>
       </section>
 
-      {selectedDate && (
+      {selectedDate && createPortal(
         <>
           <div className="sheet-backdrop" onClick={() => setSelectedDate(null)} />
           <div className="sheet">
@@ -225,7 +235,74 @@ export default function CalendarView() {
               onClose={() => setSelectedDate(null)}
             />
           </div>
-        </>
+        </>,
+        document.body
+      )}
+
+      {showMonthPicker && createPortal(
+        <>
+          <div className="sheet-backdrop" onClick={() => setShowMonthPicker(false)} />
+          <div className="sheet pb-8">
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full bg-gray-300" />
+            </div>
+
+            {/* Year navigator */}
+            <div className="flex items-center justify-between px-4 py-3">
+              <button
+                className="w-10 h-10 flex items-center justify-center rounded-full active:bg-gray-200 dark:active:bg-gray-700 text-gray-600 dark:text-gray-300 text-xl"
+                onClick={() => setPickerYear(y => y - 1)}
+              >
+                ‹
+              </button>
+              <span className="text-base font-bold text-gray-800 dark:text-gray-100">{pickerYear}</span>
+              <button
+                className="w-10 h-10 flex items-center justify-center rounded-full active:bg-gray-200 dark:active:bg-gray-700 text-gray-600 dark:text-gray-300 text-xl"
+                onClick={() => setPickerYear(y => y + 1)}
+              >
+                ›
+              </button>
+            </div>
+
+            {/* Month grid */}
+            <div className="grid grid-cols-3 gap-2 px-4 pb-2">
+              {Array.from({ length: 12 }, (_, i) => {
+                const d = new Date(pickerYear, i, 1)
+                const isActive = currentMonth.getFullYear() === pickerYear && currentMonth.getMonth() === i
+                return (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setCurrentMonth(new Date(pickerYear, i, 1))
+                      setShowMonthPicker(false)
+                    }}
+                    className={`rounded-2xl py-3 text-sm font-semibold transition-colors ${
+                      isActive
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-200 active:bg-gray-200 dark:active:bg-gray-600'
+                    }`}
+                  >
+                    {(() => { const s = format(d, 'MMM', { locale: dateFnsLocale }); return s.charAt(0).toUpperCase() + s.slice(1); })()}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Jump to today */}
+            <div className="px-4 pt-1">
+              <button
+                onClick={() => {
+                  setCurrentMonth(new Date())
+                  setShowMonthPicker(false)
+                }}
+                className="w-full rounded-2xl border border-gray-200 dark:border-gray-700 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-700"
+              >
+                {t('today')}
+              </button>
+            </div>
+          </div>
+        </>,
+        document.body
       )}
     </div>
   )

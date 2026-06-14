@@ -11,6 +11,7 @@ import {
 import { metricsApi, entriesApi } from '../../services/api'
 import { alarmsApi, medicationTrackerApi } from '../../services/localStore'
 import { useThemeContext } from '../../context/ThemeContext'
+import { useLocaleContext } from '../../context/LocaleContext'
 
 const RANGE_OPTIONS = [
   { label: '1W', days: 7 },
@@ -20,7 +21,7 @@ const RANGE_OPTIONS = [
   { label: '6M', days: 180 },
 ]
 
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const WEEKDAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 const MED_CONFETTI_PARTICLES = [
   { x: -110, y: -180, rotate: -42, color: '#f97316', delay: '0ms' },
@@ -60,24 +61,24 @@ const DAY_TREND_OPTIONS = [
 
 const TREND_VALUE_META = {
   sleepToday: {
-    great: { label: 'Great sleep', icon: '😴', tone: 'emerald' },
-    okay: { label: 'Okay sleep', icon: '🛏️', tone: 'sky' },
-    poor: { label: 'Poor sleep', icon: '🥱', tone: 'rose' },
+    great: { label: 'Great sleep', labelKey: 'trend_sleep_great', icon: '😴', tone: 'emerald' },
+    okay:  { label: 'Okay sleep',  labelKey: 'trend_sleep_okay',  icon: '🛏️', tone: 'sky'     },
+    poor:  { label: 'Poor sleep',  labelKey: 'trend_sleep_poor',  icon: '🥱', tone: 'rose'    },
   },
   foodToday: {
-    healthy: { label: 'Healthy food', icon: '🥗', tone: 'emerald' },
-    balanced: { label: 'Balanced food', icon: '🍽️', tone: 'amber' },
-    unhealthy: { label: 'Unhealthy food', icon: '🍔', tone: 'rose' },
+    healthy:   { label: 'Healthy food',   labelKey: 'trend_food_healthy',   icon: '🥗', tone: 'emerald' },
+    balanced:  { label: 'Balanced food',  labelKey: 'trend_food_balanced',  icon: '🍽️', tone: 'amber'   },
+    unhealthy: { label: 'Unhealthy food', labelKey: 'trend_food_unhealthy', icon: '🍔', tone: 'rose'    },
   },
   stressToday: {
-    low: { label: 'Low stress', icon: '🧘', tone: 'emerald' },
-    medium: { label: 'Medium stress', icon: '😬', tone: 'amber' },
-    high: { label: 'High stress', icon: '😵', tone: 'rose' },
+    low:    { label: 'Low stress',    labelKey: 'trend_stress_low',    icon: '🧘', tone: 'emerald' },
+    medium: { label: 'Medium stress', labelKey: 'trend_stress_medium', icon: '😬', tone: 'amber'   },
+    high:   { label: 'High stress',   labelKey: 'trend_stress_high',   icon: '😵', tone: 'rose'    },
   },
   activityToday: {
-    high: { label: 'Very active', icon: '🏃', tone: 'emerald' },
-    moderate: { label: 'Moderately active', icon: '🚶', tone: 'amber' },
-    low: { label: 'Not very active', icon: '🪑', tone: 'rose' },
+    high:     { label: 'Very active',        labelKey: 'trend_activity_high',     icon: '🏃', tone: 'emerald' },
+    moderate: { label: 'Moderately active',  labelKey: 'trend_activity_moderate', icon: '🚶', tone: 'amber'   },
+    low:      { label: 'Not very active',    labelKey: 'trend_activity_low',      icon: '🪑', tone: 'rose'    },
   },
 }
 
@@ -208,6 +209,7 @@ function buildDailyBeanTrend(bean) {
   return {
     key: `bean:${bean}`,
     label: bean,
+    labelKey: `bean_${bean.toLowerCase().replace(/\s+/g, '_')}`,
     icon: DAILY_BEAN_EMOJIS[bean] || '•',
     tone: DAILY_BEAN_TONES[bean] || 'gray',
   }
@@ -241,6 +243,7 @@ function getEntryTrendSignals(entry) {
 
 export default function HealthTrendsChart() {
   const { theme } = useThemeContext()
+  const { t } = useLocaleContext()
   const [allMetrics, setAllMetrics] = useState([])
   const [entries, setEntries] = useState([])
   const [allEntries, setAllEntries] = useState([])
@@ -507,9 +510,9 @@ export default function HealthTrendsChart() {
         document.body
       )}
       <div className="space-y-4">
-      <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Health</h1>
+      <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('page_health')}</h1>
 
-      <div className="card">
+      <div data-tutorial="trends-chart" className="card">
         <div className="mb-3 flex flex-wrap justify-center gap-2 pb-1">
           {RANGE_OPTIONS.map(opt => (
             <button
@@ -527,19 +530,19 @@ export default function HealthTrendsChart() {
         </div>
 
         {loading ? (
-          <div className="h-64 flex items-center justify-center text-gray-400">Loading...</div>
+          <div className="h-64 flex items-center justify-center text-gray-400">{t('loading')}</div>
         ) : chartData.length === 0 ? (
           <div className="h-64 flex items-center justify-center text-gray-400 text-sm text-center px-4">
-            No data for this period. Start logging on the Calendar.
+            {t('no_data_period')}
           </div>
         ) : selected.length === 0 ? (
           <div className="h-64 flex items-center justify-center text-gray-400 text-sm text-center px-4">
-            Tap a metric below to plot it.
+            {t('tap_metric_below')}
           </div>
         ) : (
           <>
             {normalize && (
-              <p className="text-xs text-amber-600 text-center mb-2">Showing % of each metric’s highest recorded value</p>
+              <p className="text-xs text-amber-600 text-center mb-2">{t('normalize_disclaimer')}</p>
             )}
             <div
               onTouchStart={showTouchTooltip}
@@ -628,9 +631,7 @@ export default function HealthTrendsChart() {
               >
                 <span className="text-base">{normalize ? '📊' : '📈'}</span>
                 <span>
-                  {normalize
-                    ? 'Comparing as % of each metric’s highest value - tap to show real values'
-                    : 'Metrics hard to compare? Tap to normalize to %'}
+                  {normalize ? t('normalize_on') : t('normalize_off')}
                 </span>
               </button>
             )}
@@ -642,11 +643,10 @@ export default function HealthTrendsChart() {
         <div className="space-y-3">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-base font-bold text-gray-800 dark:text-gray-100">Weekly Medication Tracker</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Check off each medication for the current week.</p>
+              <h2 className="text-base font-bold text-gray-800 dark:text-gray-100">{t('section_med_tracker')}</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('med_tracker_subtitle')}</p>
             </div>
           </div>
-
           <div className="flex items-center justify-between gap-2 rounded-2xl bg-gray-100 dark:bg-gray-700/70 p-1.5">
             <button
               type="button"
@@ -674,11 +674,11 @@ export default function HealthTrendsChart() {
 
         {medicationNames.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 px-4 py-6 text-sm text-center text-gray-500 dark:text-gray-400">
-            Add medication items to an alarm first, and they will appear here for weekly tracking.
+            {t('no_meds_add_first')}
           </div>
         ) : trackerLoading ? (
           <div className="rounded-2xl border border-gray-200 dark:border-gray-700 px-4 py-6 text-sm text-center text-gray-500 dark:text-gray-400">
-            Loading tracker...
+            {t('loading_tracker')}
           </div>
         ) : (
           <div className="space-y-3">
@@ -706,12 +706,12 @@ export default function HealthTrendsChart() {
                         key={cellKey}
                         type="button"
                         onClick={e => toggleMedicationTaken(date, name, e.currentTarget)}
-                        className={`rounded-2xl border px-1 py-2.5 min-h-[72px] flex flex-col items-center justify-center gap-1 text-center transition-all ${taken ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm' : 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-300'} ${isToday(day) && !taken ? 'ring-2 ring-primary-200 dark:ring-primary-800' : ''} ${pending ? 'opacity-60' : 'active:scale-[0.98]'}`}
+                        className={`rounded-2xl border px-1 py-2.5 min-h-[72px] flex flex-col items-center justify-center gap-1 text-center transition-all ${taken ? 'border-primary-600 bg-primary-600 text-white shadow-sm' : 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-300'} ${isToday(day) && !taken ? 'ring-2 ring-primary-200 dark:ring-primary-800' : ''} ${pending ? 'opacity-60' : 'active:scale-[0.98]'}`}
                         aria-pressed={taken}
                         aria-label={`${name} on ${format(day, 'EEEE, MMMM d')}`}
                       >
-                        <span className={`text-[10px] font-bold uppercase ${taken ? 'text-emerald-100' : 'text-gray-400 dark:text-gray-500'}`}>
-                          {WEEKDAYS[index].slice(0, 1)}
+                        <span className={`text-[10px] font-bold uppercase ${taken ? 'text-primary-100' : 'text-gray-400 dark:text-gray-500'}`}>
+                          {t('wd_1char_' + index)}
                         </span>
                         <span className={`text-sm font-semibold ${taken ? 'text-white' : isToday(day) ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-100'}`}>
                           {format(day, 'd')}
@@ -731,9 +731,9 @@ export default function HealthTrendsChart() {
 
       <section className="card space-y-4">
         <div className="space-y-1">
-          <h2 className="text-base font-bold text-gray-800 dark:text-gray-100">Health Trends</h2>
+          <h2 className="text-base font-bold text-gray-800 dark:text-gray-100">{t('section_health_trends')}</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            See the top 5 patterns that show up most often for a Great, Okay, or Rough day.
+            {t('health_trends_subtitle')}
           </p>
         </div>
 
@@ -751,7 +751,7 @@ export default function HealthTrendsChart() {
                     : `bg-white dark:bg-gray-800 ${option.inactiveClass}`
                 }`}
               >
-                {option.label}
+                {t('day_' + option.value)}
               </button>
             )
           })}
@@ -759,16 +759,16 @@ export default function HealthTrendsChart() {
 
         {trendSummary.totalDays === 0 ? (
           <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 px-4 py-6 text-sm text-center text-gray-500 dark:text-gray-400">
-            No {trendSummary.dayLabel.toLowerCase()} day check-ins yet. Log a few days to see common patterns here.
+            {t('no_days_yet', t('day_' + selectedTrendDayType).toLowerCase())}
           </div>
         ) : trendSummary.topTrends.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 px-4 py-6 text-sm text-center text-gray-500 dark:text-gray-400">
-            {trendSummary.dayLabel} days exist, but there is not enough detail yet to calculate trends.
+            {t('not_enough_detail', t('day_' + selectedTrendDayType))}
           </div>
         ) : (
           <div className="space-y-2.5">
             <div className="rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:bg-gray-800/70 dark:text-gray-300">
-              Based on {trendSummary.totalDays} {trendSummary.dayLabel.toLowerCase()} day{trendSummary.totalDays === 1 ? '' : 's'}.
+                {t('trend_based_on', trendSummary.totalDays, t('day_' + selectedTrendDayType).toLowerCase(), trendSummary.totalDays === 1 ? '' : 's')}
             </div>
 
             <div className="space-y-2">
@@ -784,14 +784,14 @@ export default function HealthTrendsChart() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-[10px] font-bold uppercase tracking-[0.16em] opacity-70">
-                          #{index + 1} trend
+                          {t('trend_num', index + 1)}
                         </p>
-                        <p className="text-sm font-semibold leading-5 text-current">{trend.label}</p>
+                        <p className="text-sm font-semibold leading-5 text-current">{trend.labelKey ? t(trend.labelKey) : trend.label}</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-base font-bold leading-none text-current">{trend.count}</p>
-                      <p className="text-xs opacity-70">{trend.percentage}% of days</p>
+                      <p className="text-xs opacity-70">{t('trend_pct', trend.percentage)}</p>
                     </div>
                   </div>
                 </div>
