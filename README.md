@@ -1,4 +1,4 @@
-# Health Tracker
+# Lifely
 
 Health Tracker is a hybrid mobile-first health journaling app with a React + Vite frontend, a retained Spring Boot backend, and Android alarm support through Capacitor.
 
