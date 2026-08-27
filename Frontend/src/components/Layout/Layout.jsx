@@ -135,7 +135,7 @@ export default function Layout() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
+    <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
       {/* Page content — padded so content never hides behind the bottom nav */}
       <main key={location.pathname} className="page-transition flex-1 px-3 pt-4 pb-32 overflow-y-auto overscroll-contain flex flex-col min-h-0">
         <Outlet />

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import { entriesApi } from '../../services/api'
+import { useLocaleContext } from '../../context/LocaleContext'
 
 const OVERALL_DAY_OPTIONS = [
   {
@@ -134,6 +135,7 @@ const DAILY_BEAN_OPTIONS = [
 ]
 
 export default function DailyCheckInPage() {
+  const { t } = useLocaleContext()
   const navigate = useNavigate()
   const [entry, setEntry] = useState(null)
   const [overallDay, setOverallDay] = useState('')
@@ -334,6 +336,7 @@ export default function DailyCheckInPage() {
 
     try {
       await persistCheckIn({ nextDailyCheckInCompleted: true })
+      window.dispatchEvent(new CustomEvent('tut-action-done'))
       navigate('/calendar')
     } finally {
       setSaving(false)
@@ -342,31 +345,31 @@ export default function DailyCheckInPage() {
 
   return (
     <div className="space-y-4 py-2">
-      <section className="overflow-hidden rounded-[28px] border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <div className={`daily-check-in-stage border-b border-gray-100 bg-gradient-to-r from-amber-50 via-white to-emerald-50 px-5 py-5 dark:border-gray-700 dark:from-gray-800 dark:via-gray-800 dark:to-gray-800 ${transitionStage === 'exiting' ? 'daily-check-in-stage-exit' : transitionStage === 'entering' ? 'daily-check-in-stage-enter' : ''}`}>
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary-500 dark:text-primary-400">Daily Check-In</p>
+      <section className="overflow-hidden rounded-[28px] border border-gray-200 dark:border-gray-700 shadow-sm" style={{ backgroundColor: 'var(--bg-card)' }}>
+        <div className={`daily-check-in-stage border-b border-gray-100 bg-gradient-to-r from-amber-50/60 via-transparent to-emerald-50/60 px-5 py-5 dark:border-gray-700 dark:from-transparent dark:via-transparent dark:to-transparent ${transitionStage === 'exiting' ? 'daily-check-in-stage-exit' : transitionStage === 'entering' ? 'daily-check-in-stage-enter' : ''}`}>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary-500 dark:text-primary-400">{t('daily_check_in')}</p>
           <h1 className="mt-1 text-xl font-bold text-gray-800 dark:text-gray-100">
             {step === 1
-              ? 'How was your overall day?'
+              ? t('q_overall_day')
               : step === 2
-                ? 'How did you sleep today?'
+                ? t('q_sleep')
                 : step === 3
-                  ? 'How was your food today?'
+                  ? t('q_food')
                   : step === 4
-                    ? 'How much stress did you have today?'
+                    ? t('q_stress')
                     : step === 5
-                      ? 'How active were you today?'
+                      ? t('q_activity')
                       : step === beanSelectionStep
-                        ? 'Which of these matched your day?'
-                        : 'Are you done with your daily check-in?'}
+                        ? t('q_beans')
+                        : t('q_submit_done')}
           </h1>
         </div>
 
         <div className={`daily-check-in-stage px-5 py-6 ${transitionStage === 'exiting' ? 'daily-check-in-stage-exit' : transitionStage === 'entering' ? 'daily-check-in-stage-enter' : ''}`}>
             {step === submissionStep ? (
             <div className="space-y-4">
-              <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/30 dark:text-gray-300">
-                You can go back if you want to change anything, or finish now and return to your calendar.
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-700 px-4 py-4 text-sm text-gray-600 dark:text-gray-300" style={{ backgroundColor: 'var(--bg)' }}>
+                {t('submit_hint')}
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
@@ -377,23 +380,24 @@ export default function DailyCheckInPage() {
                   onClick={handleFinishCheckIn}
                   className="rounded-2xl border border-primary-500 bg-primary-500 px-4 py-4 text-sm font-semibold text-white transition-colors active:bg-primary-600 disabled:opacity-60"
                 >
-                  Yes, submit it
+                  {t('btn_submit')}
                 </button>
                 <button
                   type="button"
                   disabled={saving}
                   onClick={() => animateToStep(beanSelectionStep)}
-                  className="rounded-2xl border border-gray-300 bg-white px-4 py-4 text-sm font-semibold text-gray-700 transition-colors active:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:active:bg-gray-700"
+                  className="rounded-2xl border border-gray-300 dark:border-gray-600 px-4 py-4 text-sm font-semibold text-gray-700 dark:text-gray-200 transition-colors active:opacity-80"
+                  style={{ backgroundColor: 'var(--bg-card)' }}
                 >
-                  Go Back
+                  {t('go_back')}
                 </button>
                 
               </div>
             </div>
           ) : step === beanSelectionStep ? (
             <div className="space-y-5">
-              <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/30 dark:text-gray-300">
-                Select as many as fit today, then continue to submit your check-in.
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-700 px-4 py-4 text-sm text-gray-600 dark:text-gray-300" style={{ backgroundColor: 'var(--bg)' }}>
+                {t('bean_hint')}
               </div>
 
               <div className="flex flex-wrap gap-3">
@@ -409,11 +413,11 @@ export default function DailyCheckInPage() {
                         className={`inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
                         isSelected
                             ? 'border-primary-500 bg-primary-500 text-white shadow-[0_10px_30px_-16px_rgba(34,197,94,0.85)]'
-                            : 'border-gray-300 bg-white text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200'
+                            : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200'
                       } ${saving ? 'opacity-60' : 'active:scale-[0.99]'}`}
                     >
                       <span className="text-base leading-none">{bean.emoji}</span>
-                      <span>{bean.label}</span>
+                      <span>{t('bean_' + bean.label.toLowerCase().replace(/\s+/g, '_'))}</span>
                     </button>
                   )
                 })}
@@ -425,16 +429,17 @@ export default function DailyCheckInPage() {
                 onClick={() => animateToStep(submissionStep)}
                 className="w-full rounded-2xl border border-primary-500 bg-primary-500 px-4 py-4 text-sm font-semibold text-white transition-colors active:bg-primary-600 disabled:opacity-60"
               >
-                Continue
+                {t('btn_continue')}
               </button>
 
               <button
                 type="button"
                 disabled={saving}
                 onClick={() => animateToStep(5)}
-                className="w-full rounded-2xl border border-gray-300 bg-white px-4 py-4 text-sm font-semibold text-gray-700 transition-colors active:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:active:bg-gray-700"
+                className="w-full rounded-2xl border border-gray-300 dark:border-gray-600 px-4 py-4 text-sm font-semibold text-gray-700 dark:text-gray-200 transition-colors active:opacity-80"
+                style={{ backgroundColor: 'var(--bg-card)' }}
               >
-                Go Back
+                {t('go_back')}
               </button>
             </div>
           ) : (
@@ -472,14 +477,20 @@ export default function DailyCheckInPage() {
                       className={`flex items-center gap-3 rounded-2xl border px-4 py-4 text-left transition-all duration-200 ${
                         isSelected
                           ? `${option.activeClass} shadow-[0_16px_40px_-24px_rgba(15,23,42,0.45)]`
-                          : 'border-gray-200 bg-white text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200'
+                          : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200'
                       } ${saving ? 'opacity-60' : 'active:scale-[0.99]'}`}
                     >
-                      <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-white/80 text-2xl shadow-sm dark:bg-gray-900/40">
+                      <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl text-2xl shadow-sm" style={{ backgroundColor: 'var(--bg-card)' }}>
                         {option.emoji}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-base font-semibold">{option.label}</p>
+                        <p className="text-base font-semibold">
+                          {step === 1 ? t('day_' + option.value)
+                            : step === 2 ? t('sleep_' + option.value)
+                            : step === 3 ? t('food_' + option.value)
+                            : step === 4 ? t('stress_' + option.value)
+                            : t('activity_' + option.value)}
+                        </p>
                       </div>
                     </button>
                   )
@@ -491,9 +502,10 @@ export default function DailyCheckInPage() {
                   type="button"
                   disabled={saving}
                   onClick={() => animateToStep(Math.max(1, step - 1))}
-                  className="w-full rounded-2xl border border-gray-300 bg-white px-4 py-4 text-sm font-semibold text-gray-700 transition-colors active:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:active:bg-gray-700"
+                  className="w-full rounded-2xl border border-gray-300 dark:border-gray-600 px-4 py-4 text-sm font-semibold text-gray-700 dark:text-gray-200 transition-colors active:opacity-80"
+                  style={{ backgroundColor: 'var(--bg-card)' }}
                 >
-                  Go Back
+                  {t('go_back')}
                 </button>
               )}
             </div>

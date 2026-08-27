@@ -2,6 +2,98 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Colour themes ── */
+:root {
+  /* green (default) */
+  --p-50:  240 253 244;
+  --p-100: 220 252 231;
+  --p-200: 187 247 208;
+  --p-300: 134 239 172;
+  --p-400: 74 222 128;
+  --p-500: 34 197 94;
+  --p-600: 22 163 74;
+  --p-700: 21 128 61;
+  --p-800: 22 101 52;
+  --p-900: 20 83 45;
+  /* bg (default) */
+  --bg:      #f9fafb;
+  --bg-card: #ffffff;
+}
+html.dark {
+  --bg:      #111827;
+  --bg-card: #1f2937;
+}
+/* Warm bg */
+html.bg-warm        { --bg: #fafaf9; --bg-card: #ffffff; }
+html.bg-warm.dark   { --bg: #1c1917; --bg-card: #292524; }
+/* Cool bg */
+html.bg-cool        { --bg: #f0f4ff; --bg-card: #ffffff; }
+html.bg-cool.dark   { --bg: #0f172a; --bg-card: #1e293b; }
+/* Pure bg */
+html.bg-pure        { --bg: #ffffff; --bg-card: #f3f4f6; }
+html.bg-pure.dark   { --bg: #09090b; --bg-card: #18181b; }
+
+/* ── Gradient themes (override --bg only; cards keep bg-* colour) ── */
+html.grad-sunset      { --bg: linear-gradient(160deg, #ffecd2 0%, #fcb69f 45%, #ff9a9e 100%); }
+html.grad-sunset.dark { --bg: linear-gradient(160deg, #7c1d28 0%, #9a3412 45%, #78350f 100%); }
+html.grad-ocean       { --bg: linear-gradient(160deg, #e0f2fe 0%, #bae6fd 50%, #93c5fd 100%); }
+html.grad-ocean.dark  { --bg: linear-gradient(160deg, #0c1445 0%, #0e3d6b 50%, #1e3a5f 100%); }
+html.grad-forest      { --bg: linear-gradient(160deg, #dcfce7 0%, #a7f3d0 50%, #6ee7b7 100%); }
+html.grad-forest.dark { --bg: linear-gradient(160deg, #052e16 0%, #064e3b 50%, #1a3020 100%); }
+html.grad-aurora      { --bg: linear-gradient(160deg, #f0e6ff 0%, #d8b4fe 50%, #c084fc 100%); }
+html.grad-aurora.dark { --bg: linear-gradient(160deg, #2e1065 0%, #4c1d95 50%, #3b0764 100%); }
+html.grad-rose        { --bg: linear-gradient(160deg, #ffe4e6 0%, #fda4af 50%, #fb7185 100%); }
+html.grad-rose.dark   { --bg: linear-gradient(160deg, #4c0519 0%, #881337 50%, #9f1239 100%); }
+html.grad-gold        { --bg: linear-gradient(160deg, #fffbeb 0%, #fde68a 50%, #fcd34d 100%); }
+html.grad-gold.dark   { --bg: linear-gradient(160deg, #1c1500 0%, #422006 50%, #2c1d00 100%); }
+.theme-blue {
+  --p-50:  239 246 255;
+  --p-100: 219 234 254;
+  --p-200: 191 219 254;
+  --p-300: 147 197 253;
+  --p-400: 96 165 250;
+  --p-500: 59 130 246;
+  --p-600: 37 99 235;
+  --p-700: 29 78 216;
+  --p-800: 30 64 175;
+  --p-900: 30 58 138;
+}
+.theme-purple {
+  --p-50:  250 245 255;
+  --p-100: 243 232 255;
+  --p-200: 233 213 255;
+  --p-300: 216 180 254;
+  --p-400: 192 132 252;
+  --p-500: 168 85 247;
+  --p-600: 147 51 234;
+  --p-700: 126 34 206;
+  --p-800: 107 33 168;
+  --p-900: 88 28 135;
+}
+.theme-orange {
+  --p-50:  255 247 237;
+  --p-100: 255 237 213;
+  --p-200: 254 215 170;
+  --p-300: 253 186 116;
+  --p-400: 251 146 60;
+  --p-500: 249 115 22;
+  --p-600: 234 88 12;
+  --p-700: 194 65 12;
+  --p-800: 154 52 18;
+  --p-900: 124 45 18;
+}
+.theme-rose {
+  --p-50:  255 241 242;
+  --p-100: 255 228 230;
+  --p-200: 254 205 211;
+  --p-300: 253 164 175;
+  --p-400: 251 113 133;
+  --p-500: 244 63 94;
+  --p-600: 225 29 72;
+  --p-700: 190 18 60;
+  --p-800: 159 18 57;
+  --p-900: 136 19 55;
+}
 @keyframes habit-complete-pop {
   0% {
     transform: scale(0.94);
@@ -77,13 +169,11 @@
     height: 100%;
     overflow: hidden;
     overscroll-behavior: none;
-    background-color: #f9fafb;
-  }
-  html.dark {
-    background-color: #111827;
+    background: var(--bg);
   }
   body {
-    @apply bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 antialiased;
+    @apply text-gray-900 dark:text-gray-100 antialiased;
+    background: var(--bg);
     height: 100%;
     overflow: hidden;
     overscroll-behavior: none;
@@ -129,8 +219,8 @@
            active:bg-red-700 transition-colors min-h-[48px] flex items-center justify-center;
   }
   .card {
-    @apply bg-white dark:bg-gray-800 rounded-2xl shadow-sm
-           border border-gray-200 dark:border-gray-700 p-4;
+    @apply rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4;
+    background-color: var(--bg-card);
   }
   .input {
     @apply w-full border border-gray-300 dark:border-gray-600
@@ -148,8 +238,8 @@
   }
   .sheet {
     @apply fixed bottom-0 left-0 right-0 z-50
-           bg-white dark:bg-gray-800
            rounded-t-3xl shadow-2xl overflow-y-auto;
+    background-color: var(--bg-card);
     top: max(env(safe-area-inset-top), 0.75rem);
     max-height: calc(100dvh - max(env(safe-area-inset-top), 0.75rem));
     padding-bottom: calc(env(safe-area-inset-bottom) + 6.5rem);
@@ -183,7 +273,7 @@
     height: 18px;
     border-radius: 999px;
     box-shadow: 0 0 0 1px rgb(255 255 255 / 0.18);
-    animation: habit-confetti-burst 720ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: habit-confetti-burst 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   .page-transition {
@@ -241,5 +331,18 @@
     opacity: 0.78;
     filter: saturate(0.94);
     z-index: 2;
+  }
+
+  /* Tutorial spotlight ring */
+  @keyframes tut-ring-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(var(--p-500), 0.5), 0 0 0 4px rgba(var(--p-500), 0.25); }
+    70%  { box-shadow: 0 0 0 8px rgba(var(--p-500), 0),  0 0 0 4px rgba(var(--p-500), 0.15); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--p-500), 0),    0 0 0 4px rgba(var(--p-500), 0.25); }
+  }
+
+  .tut-ring {
+    border: 2.5px solid rgb(var(--p-500));
+    animation: tut-ring-pulse 1.8s ease-in-out infinite;
+    pointer-events: none;
   }
 }

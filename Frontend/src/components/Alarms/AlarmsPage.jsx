@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react'
 import { alarmsApi, medNamesApi } from '../../services/localStore'
 import { scheduleAlarm, cancelAlarm } from '../../services/nativeAlarms'
 import TimeWheelPicker from './TimeWheelPicker'
+import { useLocaleContext } from '../../context/LocaleContext'
 
-const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-const DAY_FULL   = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const DAY_LABELS_EN = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+const DAY_FULL_EN   = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 const EMPTY_FORM = { label: '', time: '07:00', repeatMode: 'once', days: [], meds: [] }
 
@@ -65,12 +66,12 @@ function formatCountdown(ms) {
   return `${hours} h ${mins} min`
 }
 
-function repeatLabel(alarm) {
-  if (!alarm.days || alarm.days.length === 0) return 'Once'
-  if (alarm.days.length === 7) return 'Every day'
-  if (alarm.days.length === 5 && [1,2,3,4,5].every(d => alarm.days.includes(d))) return 'Weekdays'
-  if (alarm.days.length === 2 && [0,6].every(d => alarm.days.includes(d))) return 'Weekends'
-  return alarm.days.map(d => DAY_FULL[d]).join(', ')
+function repeatLabel(alarm, t, weekdaysShort) {
+  if (!alarm.days || alarm.days.length === 0) return t('repeat_once')
+  if (alarm.days.length === 7) return t('repeat_every_day')
+  if (alarm.days.length === 5 && [1,2,3,4,5].every(d => alarm.days.includes(d))) return t('repeat_weekdays')
+  if (alarm.days.length === 2 && [0,6].every(d => alarm.days.includes(d))) return t('repeat_weekends')
+  return alarm.days.map(d => (weekdaysShort ?? DAY_FULL_EN)[d]).join(', ')
 }
 
 function AlarmToggle({ enabled, onChange }) {
@@ -86,6 +87,9 @@ function AlarmToggle({ enabled, onChange }) {
 }
 
 export default function AlarmsPage() {
+  const { t } = useLocaleContext()
+  const weekdaysShort = Array.from({ length: 7 }, (_, i) => t('wd_short_' + i))
+  const weekdays1char = Array.from({ length: 7 }, (_, i) => t('wd_1char_' + i))
   const [alarms, setAlarms] = useState([])
   const [loading, setLoading] = useState(true)
   const [showSheet, setShowSheet] = useState(false)
@@ -172,6 +176,7 @@ export default function AlarmsPage() {
     await scheduleAlarm(saved)
     await load()
     closeSheet()
+    window.dispatchEvent(new CustomEvent('tut-action-done'))
   }
 
   const handleToggle = async (alarm, val) => {
@@ -181,7 +186,7 @@ export default function AlarmsPage() {
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this alarm?')) return
+    if (!window.confirm(t('delete_alarm_confirm'))) return
     await cancelAlarm(id)
     await alarmsApi.delete(id)
     await load()
@@ -218,10 +223,10 @@ export default function AlarmsPage() {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Alarms</h1>
-          <button onClick={openNew} className="btn-primary px-4 py-2 text-sm min-h-0 h-10">
-            + Add
+        <div data-tutorial="alarms-header" className="flex items-center justify-between">
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">{t('page_alarms')}</h1>
+          <button data-tutorial="add-alarm-btn" onClick={openNew} className="btn-primary px-4 py-2 text-sm min-h-0 h-10">
+            {t('add')}
           </button>
         </div>
 
@@ -230,7 +235,7 @@ export default function AlarmsPage() {
           <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-primary-50 dark:bg-primary-900/30 border border-primary-100 dark:border-primary-800">
             <span className="text-2xl">⏰</span>
             <div>
-              <p className="text-xs font-medium text-primary-500 dark:text-primary-400 uppercase tracking-wide">Next alarm in</p>
+              <p className="text-xs font-medium text-primary-500 dark:text-primary-400 uppercase tracking-wide">{t('next_alarm_in')}</p>
               <p className="text-lg font-bold text-primary-700 dark:text-primary-300 leading-tight">
                 {formatCountdown(nextAlarmDate.getTime() - now)}
               </p>
@@ -244,12 +249,12 @@ export default function AlarmsPage() {
         )}
 
         {loading ? (
-          <p className="text-gray-400 text-sm">Loading…</p>
+          <p className="text-gray-400 text-sm">{t('loading')}</p>
         ) : sorted.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
             <span className="text-5xl">⏰</span>
-            <p className="text-gray-500 dark:text-gray-400 font-semibold">No alarms set</p>
-            <p className="text-gray-400 dark:text-gray-500 text-sm">Tap "+ Add" to create one</p>
+            <p className="text-gray-500 dark:text-gray-400 font-semibold">{t('no_alarms_title')}</p>
+            <p className="text-gray-400 dark:text-gray-500 text-sm">{t('no_alarms_msg', t('add'))}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -267,7 +272,7 @@ export default function AlarmsPage() {
                     {alarm.time}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {alarm.label || '—'} · {repeatLabel(alarm)}
+                    {alarm.label || '—'} · {repeatLabel(alarm, t, weekdaysShort)}
                   </p>
                   {alarm.meds?.length > 0 && (
                     <p className="text-xs text-primary-500 dark:text-primary-400 mt-0.5 whitespace-normal break-words leading-relaxed">
@@ -305,7 +310,7 @@ export default function AlarmsPage() {
               {/* Header */}
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
-                  {editId ? '✏️ Edit Alarm' : '⏰ New Alarm'}
+                {editId ? t('edit_alarm_title') : t('new_alarm_title')}
                 </h2>
                 <button
                   onClick={closeSheet}
@@ -317,7 +322,7 @@ export default function AlarmsPage() {
 
               {/* Time picker — drum-roll wheel */}
               <div>
-                <label className="label text-center block">Time</label>
+                <label className="label text-center block">{t('alarm_time_label')}</label>
                 <TimeWheelPicker
                   value={form.time}
                   onChange={t => setForm(f => ({ ...f, time: t }))}
@@ -326,7 +331,7 @@ export default function AlarmsPage() {
 
               {/* Label */}
               <div>
-                <label className="label">Label <span className="font-normal text-gray-400">(optional)</span></label>
+                <label className="label">{t('alarm_label_label')} <span className="font-normal text-gray-400">{t('alarm_label_optional')}</span></label>
                 <input
                   type="text"
                   className="input"
@@ -339,7 +344,7 @@ export default function AlarmsPage() {
               {/* Medications */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="label mb-0">Medications <span className="font-normal text-gray-400">(optional)</span></label>
+                  <label className="label mb-0">{t('alarm_meds_label')} <span className="font-normal text-gray-400">{t('alarm_label_optional')}</span></label>
                   <button
                     type="button"
                     onClick={() => setShowMedPicker(true)}
@@ -349,7 +354,7 @@ export default function AlarmsPage() {
                   </button>
                 </div>
                 {form.meds.length === 0 ? (
-                  <p className="text-xs text-gray-400 dark:text-gray-500 py-1">No medications added</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 py-1">{t('alarm_no_meds')}</p>
                 ) : (
                   <div className="space-y-2 max-h-[28dvh] overflow-y-auto pr-1 overscroll-contain">
                     {form.meds.map((med, idx) => (
@@ -384,12 +389,12 @@ export default function AlarmsPage() {
 
               {/* Repeat mode */}
               <div>
-                <label className="label">Repeat</label>
+                <label className="label">{t('alarm_repeat_label')}</label>
                 <div className="flex gap-2">
                   {[
-                    { value: 'once',   label: 'Once'  },
-                    { value: 'daily',  label: 'Daily' },
-                    { value: 'custom', label: 'Custom'},
+                    { value: 'once',   labelKey: 'repeat_once'   },
+                    { value: 'daily',  labelKey: 'repeat_daily'  },
+                    { value: 'custom', labelKey: 'repeat_custom' },
                   ].map(opt => (
                     <button
                       key={opt.value}
@@ -401,7 +406,7 @@ export default function AlarmsPage() {
                           : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600'
                       }`}
                     >
-                      {opt.label}
+                      {t(opt.labelKey)}
                     </button>
                   ))}
                 </div>
@@ -410,9 +415,9 @@ export default function AlarmsPage() {
               {/* Day selector (custom only) */}
               {form.repeatMode === 'custom' && (
                 <div>
-                  <label className="label">Days</label>
+                  <label className="label">{t('alarm_days_label')}</label>
                   <div className="flex justify-between gap-1">
-                    {DAY_LABELS.map((d, i) => (
+                    {weekdays1char.map((d, i) => (
                       <button
                         key={i}
                         type="button"
@@ -438,10 +443,10 @@ export default function AlarmsPage() {
                   className="btn-primary flex-1"
                   disabled={!form.time || (form.repeatMode === 'custom' && form.days.length === 0)}
                 >
-                  {editId ? 'Update' : 'Set Alarm'}
+                  {editId ? t('update') : t('btn_set_alarm')}
                 </button>
                 <button type="button" className="btn-secondary" onClick={closeSheet}>
-                  Cancel
+                  {t('cancel')}
                 </button>
               </div>
             </div>
@@ -456,7 +461,7 @@ export default function AlarmsPage() {
           <div className="sheet z-[70]">
             <div className="px-4 pt-4 pb-4 flex flex-col gap-3 min-h-0">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">Add Medication</h3>
+              <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">{t('add_med_title')}</h3>
               <button
                 type="button"
                 onClick={() => { setShowMedPicker(false); setNewMedName('') }}
@@ -469,7 +474,7 @@ export default function AlarmsPage() {
               <input
                 type="text"
                 className="input flex-1"
-                placeholder="Type medication name…"
+                placeholder={t('med_name_placeholder')}
                 value={newMedName}
                 onChange={e => setNewMedName(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleAddNewMed() }}
@@ -481,7 +486,7 @@ export default function AlarmsPage() {
                 disabled={!newMedName.trim()}
                 className="btn-primary px-4 py-2 text-sm min-h-0 h-10 disabled:opacity-40"
               >
-                Add
+                {t('btn_add_med')}
               </button>
             </div>
 
@@ -507,7 +512,7 @@ export default function AlarmsPage() {
               </div>
             ) : (
               <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
-                Type a name above to create your first medication
+                {t('med_name_hint')}
               </p>
             )}
           </div>

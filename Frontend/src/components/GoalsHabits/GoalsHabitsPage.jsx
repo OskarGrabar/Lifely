@@ -7,16 +7,9 @@ import {
   subDays,
 } from 'date-fns'
 import { goalsApi, habitsApi, habitTrackerApi } from '../../services/localStore'
+import { useLocaleContext } from '../../context/LocaleContext'
 
-const MOTIVATION_LINES = [
-  'Small steps still move your life forward.',
-  'Consistency beats intensity when you are building something real.',
-  'You do not need a perfect day to make meaningful progress.',
-  'Keep the promise you made to yourself today.',
-  'The version of you in a month will thank you for starting now.',
-]
-
-const GOAL_SUGGESTIONS = [
+const GOAL_SUGGESTIONS_EN = [
   'Drink enough water every day',
   'Go for a 20 minute walk',
   'Be in bed before 11:00 PM',
@@ -24,11 +17,7 @@ const GOAL_SUGGESTIONS = [
   'Stretch for 10 minutes daily',
 ]
 
-function randomMotivation() {
-  return MOTIVATION_LINES[Math.floor(Math.random() * MOTIVATION_LINES.length)]
-}
-
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const MOTIVATION_COUNT = 5
 const CONFETTI_PARTICLES = [
   { x: -110, y: -180, rotate: -42, color: '#f97316', delay: '0ms' },
   { x: -72, y: -220, rotate: -22, color: '#fb7185', delay: '60ms' },
@@ -82,13 +71,14 @@ function createGoalBurst() {
 }
 
 export default function GoalsHabitsPage() {
+  const { t } = useLocaleContext()
   const [goals, setGoals] = useState([])
   const [activeGoalIndex, setActiveGoalIndex] = useState(0)
   const [draftGoal, setDraftGoal] = useState('')
   const [editingGoalId, setEditingGoalId] = useState(null)
   const [isTimedGoal, setIsTimedGoal] = useState(false)
   const [draftGoalDate, setDraftGoalDate] = useState('')
-  const [motivation, setMotivation] = useState(() => randomMotivation())
+  const [motivation, setMotivation] = useState(() => Math.floor(Math.random() * MOTIVATION_COUNT))
   const [savingGoal, setSavingGoal] = useState(false)
   const [isGoalEditing, setIsGoalEditing] = useState(false)
   const [goalDragOffset, setGoalDragOffset] = useState(0)
@@ -179,7 +169,7 @@ export default function GoalsHabitsPage() {
       setActiveGoalIndex(0)
       setHabits(storedHabits)
       setHabitTracker(tracker)
-      setMotivation(randomMotivation())
+      setMotivation(Math.floor(Math.random() * MOTIVATION_COUNT))
     })
   }, [])
 
@@ -288,7 +278,7 @@ export default function GoalsHabitsPage() {
       setIsTimedGoal(Boolean(completedGoal.dueDate))
       setDraftGoalDate(completedGoal.dueDate || '')
       setIsGoalEditing(false)
-      setMotivation(randomMotivation())
+      setMotivation(Math.floor(Math.random() * MOTIVATION_COUNT))
       setGoalCelebration({
         text: completedGoalText,
       })
@@ -425,17 +415,17 @@ export default function GoalsHabitsPage() {
         <div className="space-y-2.5">
           <div className="flex items-start justify-between gap-3">
             <div className="flex gap-3 min-w-0">
-              <div className={`mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl text-lg ${isCompleted ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-primary-100 dark:bg-primary-900/30'}`}>
+              <div className={`mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl text-lg ${isCompleted ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300' : 'bg-primary-100 dark:bg-primary-900/30'}`}>
                 {isCompleted ? '✓' : '🎯'}
               </div>
               <div className="min-w-0 space-y-1">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-500 dark:text-primary-400">{label}</p>
-                <p className={`text-lg font-semibold leading-7 ${isCompleted ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-900 dark:text-gray-100'}`}>{goal.text}</p>
+                <p className={`text-lg font-semibold leading-7 ${isCompleted ? 'text-primary-700 dark:text-primary-300' : 'text-gray-900 dark:text-gray-100'}`}>{goal.text}</p>
               </div>
             </div>
             {isCompleted && (
-              <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 flex-shrink-0">
-                Completed
+              <span className="rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 flex-shrink-0">
+                {t('label_completed')}
               </span>
             )}
           </div>
@@ -444,7 +434,7 @@ export default function GoalsHabitsPage() {
 
           <div className="px-1 pt-0.5">
             <p className="text-sm leading-6 text-gray-500 dark:text-gray-400 italic">
-              {motivation}
+              {t('motivation_' + motivation)}
             </p>
           </div>
 
@@ -452,7 +442,7 @@ export default function GoalsHabitsPage() {
             <div>
               {getFormattedGoalDueDate(goal) && (
                 <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:border-amber-800/80 dark:bg-amber-900/20 dark:text-amber-300">
-                  Due {getFormattedGoalDueDate(goal)}
+                  {t('due_date_prefix')} {getFormattedGoalDueDate(goal)}
                 </span>
               )}
             </div>
@@ -460,9 +450,9 @@ export default function GoalsHabitsPage() {
               type="button"
               onClick={interactive && !isCompleted ? () => handleCompleteGoal(goal) : undefined}
               disabled={!interactive || savingGoal || isCompleted}
-              className={`rounded-xl px-3.5 py-2 text-sm font-semibold transition-colors disabled:opacity-100 ${isCompleted ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-emerald-600 text-white active:bg-emerald-700'}`}
+              className={`rounded-xl px-3.5 py-2 text-sm font-semibold transition-colors disabled:opacity-100 ${isCompleted ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300' : 'bg-primary-600 text-white active:bg-primary-700'}`}
             >
-              {savingGoal && interactive && !isCompleted ? 'Completing...' : isCompleted ? 'Completed ✓' : 'Complete Goal'}
+              {savingGoal && interactive && !isCompleted ? t('loading') : isCompleted ? t('label_completed_ck') : t('btn_complete_goal')}
             </button>
           </div>
         </div>
@@ -497,6 +487,7 @@ export default function GoalsHabitsPage() {
         return [...current, savedHabit]
       })
 
+      if (!editingHabitId) window.dispatchEvent(new CustomEvent('tut-action-done'))
       closeHabitSheet()
     } finally {
       setSavingHabit(false)
@@ -521,6 +512,7 @@ export default function GoalsHabitsPage() {
         }
         return nextTracker
       })
+      window.dispatchEvent(new CustomEvent('tut-action-done'))
       closeHabitSheet()
     } finally {
       setSavingHabit(false)
@@ -616,22 +608,22 @@ export default function GoalsHabitsPage() {
       )}
 
       <div className="space-y-4">
-        <section className="card">
+        <section data-tutorial="goals-section" className="card">
         <div className="space-y-5">
           <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-primary-500 dark:text-primary-400">Goals and Habits</p>
-              <h1 className="mt-1 text-xl font-bold text-gray-800 dark:text-gray-100">Your Goals</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Keep one goal front and center, then swipe left or right to move through the rest.</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-primary-500 dark:text-primary-400">{t('page_goals_habits')}</p>
+              <h1 className="mt-1 text-xl font-bold text-gray-800 dark:text-gray-100">{t('section_goals')}</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('goals_description')}</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               {activeGoal && (
                 <button
                   type="button"
                   onClick={() => handleStartEditing(activeGoal)}
                   className="h-10 flex-shrink-0 rounded-xl border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 px-3 text-sm font-semibold text-gray-600 dark:text-gray-300 transition-colors active:bg-gray-100 dark:active:bg-gray-700"
                 >
-                  Edit
+                  {t('edit')}
                 </button>
               )}
               <button
@@ -639,7 +631,7 @@ export default function GoalsHabitsPage() {
                 onClick={() => handleStartEditing(null)}
                 className="h-10 flex-shrink-0 rounded-xl border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 px-3 text-sm font-semibold text-gray-600 dark:text-gray-300 transition-colors active:bg-gray-100 dark:active:bg-gray-700"
               >
-                + Add
+                {t('add')}
               </button>
             </div>
           </div>
@@ -660,9 +652,9 @@ export default function GoalsHabitsPage() {
                   className={`goal-swipe-layer ${goalIsAnimating ? 'goal-swipe-layer-animating' : ''} ${goalIsDragging ? 'goal-swipe-layer-dragging' : ''}`}
                   style={{ '--goal-swipe-offset': `${goalDragOffset}px` }}
                 >
-                  {previousGoal && goals.length > 1 && renderGoalCard(previousGoal, `Goal ${((activeGoalIndex - 1 + goals.length) % goals.length) + 1}`, 'goal-swipe-card-previous')}
-                  {renderGoalCard(activeGoal, `Goal ${activeGoalIndex + 1}`, 'goal-swipe-card-current border-primary-100 dark:border-primary-800', true)}
-                  {nextGoal && goals.length > 1 && renderGoalCard(nextGoal, `Goal ${((activeGoalIndex + 1) % goals.length) + 1}`, 'goal-swipe-card-next')}
+                {renderGoalCard(previousGoal, t('goal_number', ((activeGoalIndex - 1 + goals.length) % goals.length) + 1), 'goal-swipe-card-previous')}
+                  {renderGoalCard(activeGoal, t('goal_number', activeGoalIndex + 1), 'goal-swipe-card-current border-primary-100 dark:border-primary-800', true)}
+                  {nextGoal && goals.length > 1 && renderGoalCard(nextGoal, t('goal_number', ((activeGoalIndex + 1) % goals.length) + 1), 'goal-swipe-card-next')}
                 </div>
               </div>
 
@@ -685,33 +677,34 @@ export default function GoalsHabitsPage() {
               <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm dark:bg-gray-800">
                 🎯
               </div>
-              <p className="text-base font-semibold text-gray-800 dark:text-gray-100">No goal yet</p>
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Tap Add to create your first goal. After that you can swipe between them here.</p>
+              <p className="text-base font-semibold text-gray-800 dark:text-gray-100">{t('no_goal_title')}</p>
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t('no_goal_msg')}</p>
             </div>
           )}
         </div>
       </section>
 
-      <section className="card space-y-4">
+      <section data-tutorial="habits-section" className="card space-y-4">
         <div className="space-y-3">
           <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-base font-bold text-gray-800 dark:text-gray-100">Habits</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Track weekly habits here without adding them to the main calendar.</p>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base font-bold text-gray-800 dark:text-gray-100">{t('section_habits')}</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('habits_description')}</p>
             </div>
             <button
+              data-tutorial="add-habit-btn"
               type="button"
               onClick={() => openHabitSheet()}
               className="h-10 flex-shrink-0 rounded-xl border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 px-3 text-sm font-semibold text-gray-600 dark:text-gray-300 transition-colors active:bg-gray-100 dark:active:bg-gray-700"
             >
-              + Add
+              {t('add')}
             </button>
           </div>
         </div>
 
         {habits.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 px-4 py-6 text-sm text-center text-gray-500 dark:text-gray-400">
-            Add a habit to start tracking it for the week.
+            {t('no_habits_msg')}
           </div>
         ) : (
           <div className="space-y-3">
@@ -728,7 +721,7 @@ export default function GoalsHabitsPage() {
                     <div className="min-w-0">
                       <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{habit.name}</h3>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                      <span>🔥 {streak} day{streak === 1 ? '' : 's'} streak</span>
+                      <span>🔥 {t('streak_label', streak, streak === 1 ? '' : 's')}</span>
                       </div>
                     </div>
 
@@ -737,7 +730,7 @@ export default function GoalsHabitsPage() {
                       onClick={() => openHabitSheet(habit)}
                       className="rounded-xl border border-gray-200 dark:border-gray-700 px-2.5 py-1.5 text-xs font-semibold text-gray-500 dark:text-gray-300 active:bg-gray-50 dark:active:bg-gray-700"
                     >
-                      Edit
+                      {t('edit')}
                     </button>
                   </div>
 
@@ -764,12 +757,12 @@ export default function GoalsHabitsPage() {
                             }
                           }}
                           disabled={!canToggle || pending}
-                          className={`relative overflow-hidden rounded-2xl border px-1 py-2.5 min-h-[72px] flex flex-col items-center justify-center gap-1 text-center transition-all ${done ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm' : canToggle ? 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-300' : 'border-gray-200/80 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/40 text-gray-400 dark:text-gray-500'} ${canToggle && !done ? 'ring-2 ring-primary-200 dark:ring-primary-800' : ''} ${pending ? 'opacity-60' : canToggle ? 'active:scale-[0.98]' : 'opacity-80'} ${celebrating ? 'habit-complete-pop' : ''}`}
+                          className={`relative overflow-hidden rounded-2xl border px-1 py-2.5 min-h-[72px] flex flex-col items-center justify-center gap-1 text-center transition-all ${done ? 'border-primary-600 bg-primary-600 text-white shadow-sm' : canToggle ? 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-300' : 'border-gray-200/80 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/40 text-gray-400 dark:text-gray-500'} ${canToggle && !done ? 'ring-2 ring-primary-200 dark:ring-primary-800' : ''} ${pending ? 'opacity-60' : canToggle ? 'active:scale-[0.98]' : 'opacity-80'} ${celebrating ? 'habit-complete-pop' : ''}`}
                           aria-pressed={done}
                           aria-label={`${habit.name} on ${format(day, 'EEEE, MMMM d')}`}
                         >
-                          <span className={`text-[10px] font-bold uppercase ${done ? 'text-emerald-100' : 'text-gray-400 dark:text-gray-500'}`}>
-                            {WEEKDAYS[weekdayIndex].slice(0, 1)}
+                          <span className={`text-[10px] font-bold uppercase ${done ? 'text-primary-100' : 'text-gray-400 dark:text-gray-500'}`}>
+                            {t('wd_1char_' + weekdayIndex)}
                           </span>
                           <span className={`text-sm font-semibold ${done ? 'text-white' : canToggle ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-100'}`}>
                             {format(day, 'd')}
@@ -797,7 +790,7 @@ export default function GoalsHabitsPage() {
             <form onSubmit={handleSave} className="px-4 pb-4 space-y-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
-                  {editingGoalId ? '✏️ Edit Goal' : '🎯 New Goal'}
+                {editingGoalId ? t('edit_goal_title') : t('new_goal_title')}
                 </h2>
                 <button
                   type="button"
@@ -809,29 +802,29 @@ export default function GoalsHabitsPage() {
               </div>
 
               <div>
-                <label className="label">Goal</label>
+                <label className="label">{t('label_goal')}</label>
                 <textarea
                   className="input resize-none min-h-[140px]"
-                  placeholder="Write the goal you want to keep front and center..."
+                  placeholder={t('goal_placeholder')}
                   value={draftGoal}
                   onChange={event => setDraftGoal(event.target.value)}
                   maxLength={220}
                   autoFocus
                 />
                 <div className="mt-2 flex items-center justify-between">
-                  <p className="text-xs text-gray-400 dark:text-gray-500">Short and direct works best.</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">{t('goal_hint')}</p>
                   <p className="text-xs font-medium text-gray-400 dark:text-gray-500">{draftGoal.trim().length}/220</p>
                 </div>
               </div>
 
               <div>
                 <div className="flex items-center justify-between gap-3 mb-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500">Suggestions</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">Swipe sideways</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500">{t('suggestions_title')}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">{t('swipe_hint')}</p>
                 </div>
                 <div className="-mx-4 px-4 overflow-x-auto pb-1 scrollbar-none">
                   <div className="flex gap-2 w-max min-w-full">
-                    {GOAL_SUGGESTIONS.map(suggestion => {
+                    {GOAL_SUGGESTIONS_EN.map((suggestion, idx) => {
                       const isSelected = draftGoal.trim() === suggestion
 
                       return (
@@ -845,7 +838,7 @@ export default function GoalsHabitsPage() {
                               : 'border-gray-200 bg-white text-gray-700 dark:border-gray-700 dark:bg-gray-800/80 dark:text-gray-200 active:bg-gray-50 dark:active:bg-gray-700'
                           }`}
                         >
-                          {suggestion}
+                          {t('goal_suggestion_' + idx)}
                         </button>
                       )
                     })}
@@ -870,12 +863,12 @@ export default function GoalsHabitsPage() {
                     }}
                     className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
-                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Make this a timed goal</span>
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('timed_goal_toggle')}</span>
                 </label>
 
                 {isTimedGoal && (
                   <div className="mt-3 space-y-2">
-                    <label className="label mb-0">Goal Date</label>
+                    <label className="label mb-0">{t('goal_date_label')}</label>
                     <input
                       type="date"
                       value={draftGoalDate}
@@ -884,7 +877,7 @@ export default function GoalsHabitsPage() {
                       className="input"
                     />
                     <p className="text-xs text-gray-400 dark:text-gray-500">
-                      This only shows the target date. Nothing happens automatically if the goal is not completed.
+                      {t('goal_date_hint')}
                     </p>
                   </div>
                 )}
@@ -892,14 +885,14 @@ export default function GoalsHabitsPage() {
 
               <div className="flex gap-2">
                 <button className="btn-primary flex-1" type="submit" disabled={savingGoal || !draftGoal.trim() || (isTimedGoal && !draftGoalDate)}>
-                  {savingGoal ? 'Saving...' : editingGoalId ? 'Save Changes' : 'Save Goal'}
+                  {savingGoal ? t('loading') : editingGoalId ? t('save_changes') : t('btn_save_goal')}
                 </button>
                 <button className="btn-secondary" type="button" onClick={handleCancelEditing} disabled={savingGoal}>
-                  Cancel
+                  {t('cancel')}
                 </button>
                 {editingGoalId && (
                   <button className="btn-secondary" type="button" onClick={handleClear} disabled={savingGoal}>
-                    Clear
+                    {t('btn_clear_goal')}
                   </button>
                 )}
               </div>
@@ -919,7 +912,7 @@ export default function GoalsHabitsPage() {
             <form onSubmit={handleSaveHabit} className="px-4 pb-4 space-y-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
-                  {editingHabitId ? '✏️ Edit Habit' : '✅ New Habit'}
+                {editingHabitId ? t('edit_habit_title') : t('new_habit_title')}
                 </h2>
                 <button
                   type="button"
@@ -931,31 +924,31 @@ export default function GoalsHabitsPage() {
               </div>
 
               <div>
-                <label className="label">Habit</label>
+                <label className="label">{t('label_habit')}</label>
                 <input
                   className="input"
-                  placeholder="Walk after dinner"
+                  placeholder={t('habit_placeholder')}
                   value={habitDraft}
                   onChange={event => setHabitDraft(event.target.value)}
                   maxLength={80}
                   autoFocus
                 />
                 <div className="mt-2 flex items-center justify-between">
-                  <p className="text-xs text-gray-400 dark:text-gray-500">This tracker stays separate from the main calendar.</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">{t('habit_hint')}</p>
                   <p className="text-xs font-medium text-gray-400 dark:text-gray-500">{habitDraft.trim().length}/80</p>
                 </div>
               </div>
 
               <div className="flex gap-2">
                 <button className="btn-primary flex-1" type="submit" disabled={savingHabit || !habitDraft.trim()}>
-                  {savingHabit ? 'Saving...' : editingHabitId ? 'Save Changes' : 'Save Habit'}
+                  {savingHabit ? t('loading') : editingHabitId ? t('save_changes') : t('btn_save_habit')}
                 </button>
                 <button className="btn-secondary" type="button" onClick={closeHabitSheet} disabled={savingHabit}>
-                  Cancel
+                  {t('cancel')}
                 </button>
                 {editingHabitId && (
                   <button className="btn-secondary" type="button" onClick={handleDeleteHabit} disabled={savingHabit}>
-                    Delete
+                    {t('delete')}
                   </button>
                 )}
               </div>
@@ -973,10 +966,10 @@ export default function GoalsHabitsPage() {
                 🎉
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-500 dark:text-emerald-400">Congratulations!!!</p>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Goal completed</h3>
+                <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-500 dark:text-emerald-400">{t('congratulations')}</p>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('goal_completed_title')}</h3>
                 <p className="text-sm leading-6 text-gray-500 dark:text-gray-400">
-                  You completed <span className="font-semibold text-gray-800 dark:text-gray-200">{goalCelebration.text}</span>. Keep that momentum going.
+                  {t('goal_congrats_body', goalCelebration.text)}
                 </p>
               </div>
               <button
@@ -984,7 +977,7 @@ export default function GoalsHabitsPage() {
                 onClick={() => { setGoalCelebration(null); setGoalConfettiBursts([]) }}
                 className="btn-primary w-full"
               >
-                Close
+                {t('close')}
               </button>
             </div>
           </div>
